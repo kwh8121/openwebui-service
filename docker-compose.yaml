@@ -1,32 +1,57 @@
 services:
-  ollama:
-    volumes:
-      - ollama:/root/.ollama
-    container_name: ollama
-    pull_policy: always
-    tty: true
-    restart: unless-stopped
-    image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
 
-  open-webui:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG-main}
-    container_name: open-webui
-    volumes:
-      - open-webui:/app/backend/data
-    depends_on:
-      - ollama
+  # OpenWebUI
+  openwebui:
+    image: ghcr.io/open-webui/open-webui:0.9.6
     ports:
-      - ${OPEN_WEBUI_PORT-3000}:8080
+      #- "3001:8080"
+      - "80:8080"
+    volumes:
+      - ${OPENWEBUI_LOCAL_DATA:-/app/backend/data}:/app/backend/data
+      # timezone by kwh 0625 
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
     environment:
-      - 'OLLAMA_BASE_URL=http://ollama:11434'
-      - 'WEBUI_SECRET_KEY='
+      - TZ=Asia/Seoul
     extra_hosts:
-      - host.docker.internal:host-gateway
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
+    networks:
+      - shared_bridge_network
+
+  # pipelines
+  pipelines:
+    image: ghcr.io/open-webui/pipelines:main
+    ports:
+      - "9099:9099"
+    volumes:
+      - ${PIPELINES_LOCAL_DATA:-/app/pipelines}:/app/pipelines
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      # - "localhost:host-gateway"
+    restart: unless-stopped
+    networks:
+      - shared_bridge_network
+
+networks:
+  ssrf_proxy_network:
+    driver: bridge
+    internal: true
+  shared_bridge_network:
+    driver: bridge
+    name: shared_bridge_network  # 명시적 네트워크 이름 지정 by kwh 1230
 
 volumes:
-  ollama: {}
   open-webui: {}
+
+
+
+# 4. 컨테이너 간 통신 방법
+# 이제 같은 네트워크에 있으므로 컨테이너 이름으로 통신할 수 있습니다:
+# 출발지	목적지	URL
+# openwebui	fastapi-app	http://fastapi-app:8000
+# pipelines	fastapi-app	http://fastapi-app:8000
+# fastapi-app	openwebui	http://openwebui:8080
+# 5. 연결 확인
+# # 네트워크 확인docker network ls | grep shared
+# 네트워크에 연결된 컨테이너 확인 docker network inspect shared_bridge_network
