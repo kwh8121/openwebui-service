@@ -2,7 +2,9 @@ services:
 
   # OpenWebUI
   openwebui:
-    image: ghcr.io/open-webui/open-webui:0.9.6
+    image: ghcr.io/open-webui/open-webui:main
+    env_file:
+      - ./.env.openwebui.oauth
     ports:
       #- "3001:8080"
       - "80:8080"
@@ -13,6 +15,8 @@ services:
       - /etc/localtime:/etc/localtime:ro
     environment:
       - TZ=Asia/Seoul
+      - ENABLE_PERSISTENT_CONFIG=true
+      - ENABLE_OAUTH_PERSISTENT_CONFIG=true
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
@@ -52,6 +56,7 @@ volumes:
 # openwebui	fastapi-app	http://fastapi-app:8000
 # pipelines	fastapi-app	http://fastapi-app:8000
 # fastapi-app	openwebui	http://openwebui:8080
+#
 # 5. 연결 확인
 # # 네트워크 확인docker network ls | grep shared
 # 네트워크에 연결된 컨테이너 확인 docker network inspect shared_bridge_network
