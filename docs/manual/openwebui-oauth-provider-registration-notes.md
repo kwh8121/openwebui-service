@@ -17,9 +17,9 @@ HTTP 200
 
 ```json
 {
-  "oauth": {
-    "providers": {}
-  }
+	"oauth": {
+		"providers": {}
+	}
 }
 ```
 
@@ -55,9 +55,9 @@ oauth.enable_signup=true
 
 ```json
 {
-  "oauth": {
-    "providers": {}
-  }
+	"oauth": {
+		"providers": {}
+	}
 }
 ```
 
@@ -126,10 +126,10 @@ ENABLE_OAUTH_PERSISTENT_CONFIG=true
 
 ```json
 {
-  "auto_redirect": true,
-  "providers": {
-    "oidc": "Google"
-  }
+	"auto_redirect": true,
+	"providers": {
+		"oidc": "Google"
+	}
 }
 ```
 
@@ -174,7 +174,7 @@ curl -sS http://127.0.0.1/api/config | python3 -c 'import json,sys; data=json.lo
 정상 결과는 다음 형태다.
 
 ```json
-{"auto_redirect": true, "providers": {"oidc": "Google"}}
+{ "auto_redirect": true, "providers": { "oidc": "Google" } }
 ```
 
 ## DB 저장값 확인 명령

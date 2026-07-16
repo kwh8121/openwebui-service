@@ -23,7 +23,7 @@ class DifySchema:
     dify_type: str
     user_input_key: str
     response_mode: str
-    user: str = ""
+    user: str = ''
 
     def get_schema(self) -> Dict:
         """
@@ -33,36 +33,34 @@ class DifySchema:
             Dict: API 요청 스키마
         """
         # API 요청 타입에 따라 적절한 스키마 반환
-        if self.dify_type == "workflow":
+        if self.dify_type == 'workflow':
             return {
-                "inputs": {},
-                "response_mode": self.response_mode,
-                "user": self.user,
+                'inputs': {},
+                'response_mode': self.response_mode,
+                'user': self.user,
             }
-        elif self.dify_type == "agent":
+        elif self.dify_type == 'agent':
             return {
-                "inputs": {},
-                "query": self.user_input_key,
-                "response_mode": self.response_mode,
-                "user": self.user,
+                'inputs': {},
+                'query': self.user_input_key,
+                'response_mode': self.response_mode,
+                'user': self.user,
             }
-        elif self.dify_type == "chat":
+        elif self.dify_type == 'chat':
             return {
-                "inputs": {},
-                "query": "",
-                "response_mode": self.response_mode,
-                "user": self.user,
+                'inputs': {},
+                'query': '',
+                'response_mode': self.response_mode,
+                'user': self.user,
             }
-        elif self.dify_type == "completion":
+        elif self.dify_type == 'completion':
             return {
-                "inputs": {},
-                "response_mode": self.response_mode,
-                "user": self.user,
+                'inputs': {},
+                'response_mode': self.response_mode,
+                'user': self.user,
             }
         else:
-            raise ValueError(
-                "Invalid dify_type. Must be 'completion', 'workflow', 'agent', or 'chat'"
-            )
+            raise ValueError("Invalid dify_type. Must be 'completion', 'workflow', 'agent', or 'chat'")
 
 
 class Pipeline:
@@ -93,7 +91,7 @@ class Pipeline:
         USER_INPUT_KEY: str
         USER_INPUTS: str
         DIFY_TYPE: str
-        RESPONSE_MODE: Optional[str] = "streaming"
+        RESPONSE_MODE: Optional[str] = 'streaming'
         VERIFY_SSL: Optional[bool] = True
 
     def __init__(self):
@@ -101,18 +99,16 @@ class Pipeline:
         # 환경 변수에서 설정값을 가져와 Valves 객체 초기화
         self.valves = self.Valves(
             **{
-                "pipelines": ["*"],
-                "APP_NAME": os.getenv("APP_NAME", "Dify_Cloud"),
+                'pipelines': ['*'],
+                'APP_NAME': os.getenv('APP_NAME', 'Dify_Cloud'),
                 # "HOST_URL": os.getenv("HOST_URL", "http://host.docker.internal"),
-                "HOST_URL": os.getenv("HOST_URL", "https://api.dify.ai/v1"),
-                "DIFY_API_KEY": os.getenv("DIFY_API_KEY", "YOUR_DIFY_API_KEY"),
-                "USER_INPUT_KEY": os.getenv("USER_INPUT_KEY", "input"),
-                "USER_INPUTS": (
-                    os.getenv("USER_INPUTS") if os.getenv("USER_INPUTS") else "{}"
-                ),
-                "DIFY_TYPE": os.getenv("DIFY_TYPE", "workflow"),
-                "RESPONSE_MODE": os.getenv("RESPONSE_MODE", "streaming"),
-                "VERIFY_SSL": os.getenv("VERIFY_SSL", False),
+                'HOST_URL': os.getenv('HOST_URL', 'https://api.dify.ai/v1'),
+                'DIFY_API_KEY': os.getenv('DIFY_API_KEY', 'YOUR_DIFY_API_KEY'),
+                'USER_INPUT_KEY': os.getenv('USER_INPUT_KEY', 'input'),
+                'USER_INPUTS': (os.getenv('USER_INPUTS') if os.getenv('USER_INPUTS') else '{}'),
+                'DIFY_TYPE': os.getenv('DIFY_TYPE', 'workflow'),
+                'RESPONSE_MODE': os.getenv('RESPONSE_MODE', 'streaming'),
+                'VERIFY_SSL': os.getenv('VERIFY_SSL', False),
             }
         )
         self.name = self.valves.APP_NAME
@@ -134,16 +130,16 @@ class Pipeline:
             str: API 엔드포인트 URL
         """
         # API 타입에 따른 엔드포인트 URL 생성
-        if self.valves.DIFY_TYPE == "workflow":
-            return f"{self.valves.HOST_URL}/workflows/run"
-        elif self.valves.DIFY_TYPE == "agent":
-            return f"{self.valves.HOST_URL}/chat-messages"
-        elif self.valves.DIFY_TYPE == "chat":
-            return f"{self.valves.HOST_URL}/chat-messages"
-        elif self.valves.DIFY_TYPE == "completion":
-            return f"{self.valves.HOST_URL}/completion-messages"
+        if self.valves.DIFY_TYPE == 'workflow':
+            return f'{self.valves.HOST_URL}/workflows/run'
+        elif self.valves.DIFY_TYPE == 'agent':
+            return f'{self.valves.HOST_URL}/chat-messages'
+        elif self.valves.DIFY_TYPE == 'chat':
+            return f'{self.valves.HOST_URL}/chat-messages'
+        elif self.valves.DIFY_TYPE == 'completion':
+            return f'{self.valves.HOST_URL}/completion-messages'
         else:
-            raise ValueError(f"Invalid Dify type: {self.valves.DIFY_TYPE}")
+            raise ValueError(f'Invalid Dify type: {self.valves.DIFY_TYPE}')
 
     def set_data_schema(self, schema: dict):
         """
@@ -156,12 +152,12 @@ class Pipeline:
 
     async def on_startup(self):
         """서버 시작 시 호출되는 메서드"""
-        print(f"on_startup: {__name__}")
+        print(f'on_startup: {__name__}')
         pass
 
     async def on_shutdown(self):
         """서버 종료 시 호출되는 메서드"""
-        print(f"on_shutdown: {__name__}")
+        print(f'on_shutdown: {__name__}')
         pass
 
     async def inlet(self, body: dict, user: Optional[dict] = None) -> dict:
@@ -175,11 +171,11 @@ class Pipeline:
         Returns:
             dict: 처리된 요청 본문
         """
-        print(f"inlet: {__name__}")
+        print(f'inlet: {__name__}')
         if self.debug:
-            print(f"inlet: {__name__} - body:")
+            print(f'inlet: {__name__} - body:')
             pprint(body)
-            print(f"inlet: {__name__} - user:")
+            print(f'inlet: {__name__} - user:')
             pprint(user)
         return body
 
@@ -194,11 +190,11 @@ class Pipeline:
         Returns:
             dict: 처리된 응답 본문
         """
-        print(f"outlet: {__name__}")
+        print(f'outlet: {__name__}')
         if self.debug:
-            print(f"outlet: {__name__} - body:")
+            print(f'outlet: {__name__} - body:')
             pprint(body)
-            print(f"outlet: {__name__} - user:")
+            print(f'outlet: {__name__} - user:')
             pprint(user)
         return body
 
@@ -219,30 +215,30 @@ class Pipeline:
         """
 
         if self.debug:
-            print(f"pipe: {__name__} - received message from user: {user_message}")
+            print(f'pipe: {__name__} - received message from user: {user_message}')
 
         try:
             # API 요청 헤더 설정
             self.name = self.valves.APP_NAME
             self.headers = {
-                "Authorization": f"Bearer {self.valves.DIFY_API_KEY}",
-                "Content-Type": "application/json",
+                'Authorization': f'Bearer {self.valves.DIFY_API_KEY}',
+                'Content-Type': 'application/json',
             }
 
             # 요청 데이터 준비
             data = self.data_schema.copy()
-            if self.valves.DIFY_TYPE == "workflow":
-                data["inputs"][self.valves.USER_INPUT_KEY] = user_message
-            elif self.valves.DIFY_TYPE == "agent" or self.valves.DIFY_TYPE == "chat":
-                data["query"] = user_message
-            elif self.valves.DIFY_TYPE == "completion":
-                data["inputs"]["query"] = user_message
-            data["user"] = body["user"]["email"]
+            if self.valves.DIFY_TYPE == 'workflow':
+                data['inputs'][self.valves.USER_INPUT_KEY] = user_message
+            elif self.valves.DIFY_TYPE == 'agent' or self.valves.DIFY_TYPE == 'chat':
+                data['query'] = user_message
+            elif self.valves.DIFY_TYPE == 'completion':
+                data['inputs']['query'] = user_message
+            data['user'] = body['user']['email']
 
             # 추가 사용자 입력 처리
             if self.valves.USER_INPUTS:
                 inputs_dict = json.loads(self.valves.USER_INPUTS)
-                data["inputs"].update(inputs_dict)
+                data['inputs'].update(inputs_dict)
             print(data)
 
             # API 요청 실행
@@ -251,41 +247,41 @@ class Pipeline:
                 headers=self.headers,
                 json=data,
                 verify=self.valves.VERIFY_SSL,
-                stream=self.valves.RESPONSE_MODE == "streaming",
+                stream=self.valves.RESPONSE_MODE == 'streaming',
             )
 
             if response.status_code != 200:
-                yield f"API request failed with status code {response.status_code}: {response.text}"
+                yield f'API request failed with status code {response.status_code}: {response.text}'
 
             # 스트리밍 또는 일반 응답 처리
-            if self.valves.RESPONSE_MODE == "streaming":
+            if self.valves.RESPONSE_MODE == 'streaming':
                 for line in response.iter_lines():
                     if line:
-                        decoded_line = line.decode("utf-8")
-                        if decoded_line.startswith("data: "):
+                        decoded_line = line.decode('utf-8')
+                        if decoded_line.startswith('data: '):
                             try:
-                                data = json.loads(decoded_line.replace("data: ", ""))
-                                if data["event"] == "text_chunk":
-                                    yield data["data"]["text"]
+                                data = json.loads(decoded_line.replace('data: ', ''))
+                                if data['event'] == 'text_chunk':
+                                    yield data['data']['text']
                                 elif (
-                                    data["event"] == "agent_message"
-                                    or data["event"] == "message"
-                                    or data["event"] == "completion"
+                                    data['event'] == 'agent_message'
+                                    or data['event'] == 'message'
+                                    or data['event'] == 'completion'
                                 ):
-                                    if "answer" in data:
-                                        yield data["answer"]
+                                    if 'answer' in data:
+                                        yield data['answer']
                                     else:
-                                        yield data["data"]["text"]
-                                elif data["event"] == "workflow_finished":
-                                    yield data["data"]["outputs"]["output"]
+                                        yield data['data']['text']
+                                elif data['event'] == 'workflow_finished':
+                                    yield data['data']['outputs']['output']
                             except:
-                                print(f"Error parsing line: {decoded_line}")
+                                print(f'Error parsing line: {decoded_line}')
             else:
                 try:
                     response_data = json.loads(response.text)
                     yield response_data
                 except json.JSONDecodeError:
-                    yield f"Failed to parse JSON response. Raw response: {response.text}"
+                    yield f'Failed to parse JSON response. Raw response: {response.text}'
 
         except requests.exceptions.RequestException as e:
-            yield f"API request failed: {str(e)}"
+            yield f'API request failed: {str(e)}'
