@@ -1,0 +1,24 @@
+services:
+  openwebui:
+    image: ghcr.io/kwh8121/openwebui-service:${OPENWEBUI_STAGING_IMAGE_TAG:?Set OPENWEBUI_STAGING_IMAGE_TAG to a GHCR RC tag}
+    env_file:
+      - ${OPENWEBUI_STAGING_ENV_FILE:?Set OPENWEBUI_STAGING_ENV_FILE to a staging-only OAuth environment file}
+    ports:
+      - '127.0.0.1:${OPENWEBUI_STAGING_PORT:-8081}:8080'
+    volumes:
+      - ${OPENWEBUI_STAGING_DATA:?Set OPENWEBUI_STAGING_DATA to an isolated staging data directory}:/app/backend/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - TZ=Asia/Seoul
+      - ENABLE_PERSISTENT_CONFIG=true
+      - ENABLE_OAUTH_PERSISTENT_CONFIG=true
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    restart: unless-stopped
+    networks:
+      - openwebui_staging_network
+
+networks:
+  openwebui_staging_network:
+    driver: bridge

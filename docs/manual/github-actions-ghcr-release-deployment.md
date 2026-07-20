@@ -41,7 +41,9 @@ Use immutable release and commit tags:
 git-<commit-sha>
 ```
 
-Do not use mutable tags such as `main` or `latest` for production deployment. Buildx registry cache is stored in GHCR and shared across CI runs with `cache-from` and `cache-to`. This reuses unchanged frontend and Python dependency layers.
+Do not use mutable tags such as `main` or `latest` for production deployment. Buildx registry cache is stored in GHCR and shared across CI runs with `cache-from` and `cache-to`. This reuses unchanged frontend and Python dependency layers. The workflow builds only tags matching `v*-kwh.*` for `linux/amd64`, which matches the current deployment host.
+
+Before merging to `main`, an RC tag such as `v0.10.2-kwh.1-rc.1` can be created from an integration branch to produce a staging image. The final tag is created only from the merged `main` commit.
 
 The workflow requires `contents: read` and `packages: write` permissions. A production server pulling a private GHCR image must use a separate read-only package token; never copy the GitHub Actions `GITHUB_TOKEN` to the server.
 
@@ -49,12 +51,14 @@ The workflow requires `contents: read` and `packages: write` permissions. A prod
 
 `docker-compose-build.yaml` is for development builds and retains its `build:` section. It must not be the production deployment definition.
 
-Create and maintain a separate `docker-compose.deploy.yaml` that:
+`docker-compose.deploy.yaml` is the production definition. It:
 
 - Has no `build:` section.
 - References `ghcr.io/kwh8121/openwebui-service:${OPENWEBUI_IMAGE_TAG}`.
 - Preserves existing ports, networks, environment files, and bind mounts.
 - Keeps `/app/backend/data` and `/app/pipelines` persistent across container replacement.
+
+`docker-compose.staging.yaml` is the isolated validation definition. It requires a separate data directory, staging-only OAuth environment file, RC image tag, and localhost-only port. It must never mount the production data directory.
 
 Deployment uses a fixed image tag and recreates only Open WebUI:
 
