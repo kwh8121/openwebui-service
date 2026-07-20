@@ -10,8 +10,8 @@
 
 ```json
 {
-  "version": "0.9.5",
-  "default_locale": ""
+	"version": "0.9.5",
+	"default_locale": ""
 }
 ```
 
@@ -51,7 +51,7 @@ docker compose up -d openwebui
 
 ```json
 {
-  "version": "0.9.6"
+	"version": "0.9.6"
 }
 ```
 
