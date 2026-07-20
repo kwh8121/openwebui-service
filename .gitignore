@@ -315,3 +315,9 @@ cypress/videos
 cypress/screenshots
 .vscode/settings.json
 .cptr
+
+# Local agent state and tooling metadata
+.agents/
+.serena/
+sesstion.txt
+skills-lock.json

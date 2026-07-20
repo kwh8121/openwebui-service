@@ -1,33 +1,28 @@
-# Repository Guidelines
+# Open WebUI Agent Guide
 
-## Project Structure & Module Organization
+## Layout
 
-Open WebUI combines a SvelteKit frontend with a Python FastAPI backend. Frontend routes live in `src/routes`, shared UI and client utilities in `src/lib`, and global styles in `src/app.css` and `src/tailwind.css`. Backend code is under `backend/open_webui`; key areas include `routers`, `models`, `utils`, `retrieval`, and Alembic `migrations`. Static web assets are in `static`, with packaged backend copies in `backend/open_webui/static`. Test fixtures currently live under `test/test_files`.
+- `src/` is the SvelteKit frontend. `src/routes` contains routes and `src/lib` contains shared UI, stores, and client utilities.
+- `backend/open_webui/main.py` creates the FastAPI app, registers routers under `/api/v1`, `/ollama`, and `/openai`, then mounts the built frontend as the SPA fallback. Backend configuration is centralized in `backend/open_webui/config.py` and `env.py`.
+- `npm run build` creates `build/`; it is packaged into the Python wheel as `open_webui/frontend`. Do not edit built assets.
+- Database migrations live in `backend/open_webui/migrations`. Generate one with `DATABASE_URL=<url> alembic revision --autogenerate -m "description"`.
 
-## Build, Test, and Development Commands
+## Local Development
 
-- `npm run dev`: fetches Pyodide assets and starts Vite.
-- `npm run dev:5050`: starts the frontend on port 5050.
-- `npm run build`: builds the SvelteKit app.
-- `npm run preview`: previews the production frontend build.
-- `npm run check`: runs `svelte-check`.
-- `npm run lint`: runs frontend ESLint, Svelte type checks, and backend Pylint.
-- `npm run test:frontend`: runs Vitest.
-- `npm run cy:open`: opens Cypress.
-- `make install`, `make start`, `make stop`: manage the Docker Compose stack.
+- Node is engine-strict and must be `>=18.13.0` through Node 22; Python support is 3.11-3.12.
+- Frontend: `npm run dev` fetches Pyodide assets before starting Vite. Use `npm run dev:5050` only when port 5050 is required.
+- Backend: from `backend/`, run `./dev.sh`. It starts the reload server on port 8080 and allows the Vite origin. Run it alongside Vite for full-stack work.
+- The supported packaged server command is `open-webui serve`; it creates or loads `.webui_secret_key` when `WEBUI_SECRET_KEY` is absent. Do not commit that key or `backend/data`.
 
-## Coding Style & Naming Conventions
+## Verification And Formatting
 
-Use nearby files as the source of truth. Prettier formats JS, TS, Svelte, CSS, Markdown, HTML, and JSON with tabs, single quotes, no trailing commas, LF endings, and a 100-column print width. Python uses Ruff formatting with single quotes and a 120-column line length. Name Svelte components `PascalCase.svelte`, TypeScript modules with descriptive `camelCase` or domain names, and Python modules `snake_case.py`.
+- Frontend type check: `npm run check`. Production build: `npm run build`; both fetch Pyodide first.
+- Frontend tests: `npm run test:frontend -- <path-or-vitest-args>`.
+- `npm run lint:frontend`, `npm run format`, and `npm run i18n:parse` modify files. The last regenerates `src/lib/i18n`; run it after changing translatable strings and include its output.
+- CI runs `npm run format`, `npm run i18n:parse`, then requires a clean tree before building. Use `npx prettier --check <files>` when a non-mutating frontend format check is needed.
+- Backend CI is `ruff format --check . --exclude .venv --exclude venv`; format backend edits with `npm run format:backend`. `npm run lint:backend` runs Pylint across `backend/`.
 
-## Testing Guidelines
+## Delivery Constraints
 
-Place focused frontend unit tests near the feature using `.test.ts` or `.spec.ts` names. Use Cypress for browser flows and document required backend or fixture setup. For backend changes, add pytest coverage where practical and keep reusable fixtures under `test/`. Run the relevant subset plus `npm run check` before opening a PR.
-
-## Commit & Pull Request Guidelines
-
-Recent history uses short subjects such as `refac`, release labels, and merge commits; the PR template requires typed title prefixes such as `feat`, `fix`, `docs`, `refactor`, `test`, `build`, or `chore`. Keep changes atomic and target `dev`. PRs should link an issue or discussion, describe behavior changes, include a Keep a Changelog-style entry, note dependency changes, and add screenshots or recordings for UI work. Do not remove the CLA section.
-
-## Security & Configuration Tips
-
-Do not commit secrets, local databases, generated environment files, or private model data. Use environment variables for provider keys and service URLs, and keep runtime data in `backend/data` or Docker volumes.
+- Develop custom changes in `feature/*`, merge official releases and features into `integration/vX.Y.Z`, then open verified integration PRs against `main`. Use typed PR titles and keep the required CLA section in the PR description.
+- The root Compose configuration is deployment-specific: it loads `.env.openwebui.oauth`, exposes port 80, and joins `shared_bridge_network`. Do not assume it is a generic local development stack.
