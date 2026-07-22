@@ -26,3 +26,14 @@
 
 - Develop custom changes in `feature/*`, merge official releases and features into `integration/vX.Y.Z`, then open verified integration PRs against `main`. Use typed PR titles and keep the required CLA section in the PR description.
 - The root Compose configuration is deployment-specific: it loads `.env.openwebui.oauth`, exposes port 80, and joins `shared_bridge_network`. Do not assume it is a generic local development stack.
+
+## Release Routine And Session Continuity
+
+Reference these before touching the release or deploy path:
+
+- **Practical routine (start here)**: `docs/manual/kwh-release-routine.md` — end-to-end feature → integration → RC → staging → PR → main → final tag → prod flow, with copy-paste SSH blocks and recovery patterns.
+- **Authoritative rules**: `docs/manual/github-actions-ghcr-release-deployment.md` — if any doc conflicts with this one, this wins.
+- **Session/work logs**: `docs/jobs/YYYY-MM-DD-openwebui-jobs.md` — append same-day work; new file only when the date rolls over.
+- **GHCR image tag format**: `vX.Y.Z-kwh.N` (with the `v` prefix, verbatim from the git tag) and `git-<7-char-short-sha>`. Bare `X.Y.Z-kwh.N` or a full 40-char SHA are not published and will fail to `docker pull`.
+- **Never commit directly to `main`.** If it happens locally, preserve the commit by creating `feature/<slug>` at that SHA, `git reset --hard origin/main`, then merge the feature into `integration/vX.Y.Z` with `--no-ff`. Verified recovery: 2026-07-22 with commit `c68c745d2`.
+- **Doc-only changes** skip the integration cycle: branch from `main`, PR directly to `main`, no new tag.
