@@ -37,9 +37,11 @@ ghcr.io/kwh8121/openwebui-service
 Use immutable release and commit tags:
 
 ```text
-0.10.2-kwh.1
-git-<commit-sha>
+v0.10.2-kwh.1
+git-<short-commit-sha>
 ```
+
+The GHCR image tag preserves the git tag verbatim, including the `v` prefix, because the workflow uses `docker/metadata-action`'s `type=ref,event=tag` with no `semver` stripping. The commit-SHA tag uses `type=sha,prefix=git-` which defaults to a 7-character short SHA (e.g., `git-42681f0`).
 
 Do not use mutable tags such as `main` or `latest` for production deployment. Buildx registry cache is stored in GHCR and shared across CI runs with `cache-from` and `cache-to`. This reuses unchanged frontend and Python dependency layers. The workflow builds only tags matching `v*-kwh.*` for `linux/amd64`, which matches the current deployment host.
 
