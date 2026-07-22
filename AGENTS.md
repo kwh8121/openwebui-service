@@ -26,3 +26,19 @@
 
 - Develop custom changes in `feature/*`, merge official releases and features into `integration/vX.Y.Z`, then open verified integration PRs against `main`. Use typed PR titles and keep the required CLA section in the PR description.
 - The root Compose configuration is deployment-specific: it loads `.env.openwebui.oauth`, exposes port 80, and joins `shared_bridge_network`. Do not assume it is a generic local development stack.
+
+## Release Routine And Session Continuity
+
+Reference these before touching the release or deploy path:
+
+- **Practical routine (start here)**: `docs/manual/kwh-release-routine.md` — end-to-end feature → integration → RC → staging → PR → main → final tag → prod flow, with copy-paste SSH blocks, environment variables inventory, SQLite WAL-safe backup, smoke checklist, and recovery patterns.
+- **Authoritative rules**: `docs/manual/github-actions-ghcr-release-deployment.md` — **in any doc conflict, this wins.** Covers:
+  - Repository roles (`origin` push target; `upstream` fetch-only with push URL `DISABLED`).
+  - Branch and release flow (`feature/*` → `integration/vX.Y.Z` via `--no-ff` → PR → `main` → tag).
+  - Image build policy (immutable tags, `linux/amd64`, buildx registry cache, `v*-kwh.*` workflow trigger, RC vs final tag semantics).
+  - Deployment policy (compose files: `docker-compose.deploy.yaml` for prod, `docker-compose.staging.yaml` for isolated staging, `docker-compose-build.yaml` for dev only; pre-deploy backup; rollback via prior image tag).
+  - Model cache considerations for slim vs non-slim builds.
+- **Session/work history**: `docs/jobs/YYYY-MM-DD-openwebui-jobs.md` under `~/projects/openwebui-service/docs/jobs/`. Each file records that day's decisions, commits, PRs, and learnings for cross-session context. Same-day work: **append** as a new `## HH:MM` section. Date change: **new file**. Consult prior days' logs before repeating work.
+- **GHCR image tag format**: `vX.Y.Z-kwh.N` (with the `v` prefix, verbatim from the git tag) and `git-<7-char-short-sha>`. Bare `X.Y.Z-kwh.N` or a full 40-char SHA are not published and will fail to `docker pull`.
+- **Never commit directly to `main`.** If it happens locally, preserve the commit by creating `feature/<slug>` at that SHA, `git reset --hard origin/main`, then merge the feature into `integration/vX.Y.Z` with `--no-ff`. Verified recovery: 2026-07-22 with commit `c68c745d2`.
+- **Doc-only changes** skip the integration cycle: branch from `main`, PR directly to `main`, no new tag.
