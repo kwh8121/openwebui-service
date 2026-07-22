@@ -320,7 +320,7 @@
 		if (type === 'prompt') {
 			// Handle prompt selection
 			messageInput?.setText(data, async () => {
-				if (!($settings?.insertSuggestionPrompt ?? false)) {
+				if (!($settings?.insertSuggestionPrompt ?? true)) {
 					await tick();
 					submitHandler(prompt);
 				}
