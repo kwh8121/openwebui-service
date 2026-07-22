@@ -331,3 +331,5 @@ Kept here so operators know what will conflict on future upstream merges.
 | `src/lib/components/chat/Settings/Interface.svelte` | 57, 227 | `= false` / `?? false` → `= true` / `?? true` (matches Chat.svelte default) | `c68c745d2` (v0.10.2-kwh.2) |
 | `backend/open_webui/env.py` | 842-844 | Removed `if WEBUI_NAME != 'Open WebUI': WEBUI_NAME += ' (Open WebUI)'` | `4cbd9a061` (v0.10.2-kwh.2) |
 | `static/static/*` + `backend/open_webui/static/*` | — | Koreatimes brand assets (12 files × 2 dirs) | `171e0f742` (v0.10.2-kwh.2) |
+| `.gitignore` | 22 | Removed `CLAUDE.md` entry so the fork's root `CLAUDE.md` (which `@`-imports `AGENTS.md`) can be committed for Claude Code session startup | Post-v0.10.2-kwh.2 (this PR) |
+| `CLAUDE.md` (new file) | — | Repo-root Claude Code entry point; single line `@AGENTS.md` | Post-v0.10.2-kwh.2 (this PR) |
