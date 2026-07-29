@@ -1,0 +1,25 @@
+services:
+  openwebui:
+    image: ghcr.io/kwh8121/openwebui-service:${OPENWEBUI_LOCAL_TEST_TAG:?Set OPENWEBUI_LOCAL_TEST_TAG (must be v-prefixed, e.g., v0.10.2-kwh.2)}
+    env_file:
+      - ${OPENWEBUI_LOCAL_TEST_ENV_FILE:-./.env.local-test}
+    ports:
+      - '127.0.0.1:${OPENWEBUI_LOCAL_TEST_PORT:-8082}:8080'
+    volumes:
+      - ${OPENWEBUI_LOCAL_TEST_DATA:?Set OPENWEBUI_LOCAL_TEST_DATA (isolated data dir)}:/app/backend/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - TZ=Asia/Seoul
+      - ENABLE_PERSISTENT_CONFIG=true
+      # Keep parity with staging/prod compose even though OAuth is off here.
+      - ENABLE_OAUTH_PERSISTENT_CONFIG=true
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    restart: 'no'
+    networks:
+      - openwebui_local_test_network
+
+networks:
+  openwebui_local_test_network:
+    driver: bridge

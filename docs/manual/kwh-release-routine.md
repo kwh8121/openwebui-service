@@ -146,6 +146,42 @@ git push origin vX.Y.Z-kwh.N
 
 Monitor the build; verify success before touching production.
 
+### 3.9-b Local pre-deploy verification (optional)
+
+An **additional defense line**, not a replacement for staging. Pull the just-built final-tag image on a local WSL2 host, boot it in an isolated container, and confirm image integrity (container up, no startup errors, `/health` 200) before an SSH production deploy.
+
+**Immutable final-tag rule:** if local verification finds a defect, do **not** rebuild or overwrite `vX.Y.Z-kwh.N`. Final tags are immutable — a rebuild changes the image SHA and breaks reproducibility. Fix the root cause, cut the next release number (e.g., `kwh.N+1`), and re-run the pipeline from staging (§3.5). Production deploy stays halted.
+
+**What this covers:** image pull + container boot success, fresh-DB migration on an empty data directory, brand-asset integrity (`WEBUI_NAME=Koreatimes` with no suffix, logos, splash), `/health` 200.
+**What this does NOT cover** (staging gate handles these): full OAuth flow, pipelines/model requests, RAG, and **production-data migration compatibility** (empty DB verifies fresh-install migrations only).
+
+First-time setup (once):
+
+```bash
+docker login ghcr.io -u kwh8121   # PAT needs read:packages
+cp .env.local-test.template .env.local-test
+```
+
+Run (default = empty data dir enforced):
+
+```bash
+./scripts/local-test.sh v0.10.2-kwh.N   # must be v-prefixed final tag
+# → open http://127.0.0.1:8082 and walk the manual checklist
+```
+
+Option flags:
+
+- `--reuse-data` — reuse an existing data directory; fresh-migration check is skipped.
+- `--allow-rc` — also accept RC tags for a pull-only sanity check; **does not replace the staging gate**.
+
+Teardown:
+
+```bash
+./scripts/local-test.sh v0.10.2-kwh.N --down
+```
+
+**Warning:** a local pass is not a deploy-approval. It only runs after RC → staging has already validated the corresponding integration branch and a final tag has been cut.
+
 ### 3.10 Production deploy (SSH to prod host)
 
 See §7 (full command block).
