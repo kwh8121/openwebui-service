@@ -42,7 +42,9 @@ jobs:
         run: git diff --exit-code
 
       - name: Production build
-        run: NODE_OPTIONS=--max-old-space-size=6144 npm run build
+        run: npm run build
+        env:
+          NODE_OPTIONS: --max-old-space-size=8192
 
   # ── Vitest unit tests ────────────────────────────────────────────────────
   unit-tests:
