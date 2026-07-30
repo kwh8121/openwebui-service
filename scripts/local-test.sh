@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# local-test.sh — Local production-mirror verification for GHCR openwebui-service (v4).
+# local-test.sh — Local production-mirror verification for GHCR openwebui-service (v4.2).
 #
 # Purpose:
 #   Pull a GHCR image and boot it locally in an isolated compose that mirrors
@@ -35,6 +35,9 @@
 #   OPENWEBUI_LOCAL_TEST_PORT       host port (default: 8082)
 #   PIPELINES_LOCAL_TEST_PORT       pipelines host port (default: 9099)
 #   OPENWEBUI_LOCAL_TEST_ENV_FILE   env file (default: ./.env.local-test)
+#   BACKUP_MIN_BYTES                minimum backup archive size in bytes for tar
+#                                   exit=1 to be treated as a non-fatal warning
+#                                   (default: 1048576 = 1 MiB)
 
 set -euo pipefail
 
@@ -361,23 +364,73 @@ else
   echo "MODE: production-mirror (preserving accumulated data)"
 fi
 
-# --- Automatic backup (v4) ----------------------------------------------
+# --- Automatic backup (v4 + v4.2 tar-exit-1 tolerance) ------------------
+# tar exit codes:
+#   0 = full success
+#   1 = "some files differ" / "file changed as we read it" — file IS created
+#       (common when SQLite WAL / vector_db writes race the read)
+#   2 = fatal (disk full, permission, path missing) — file may be missing/tiny
+# v4.2 treats exit 1 as non-fatal iff the archive was actually produced and is
+# reasonably large. Fatal (exit ≥ 2) or missing/tiny output still aborts.
+BACKUP_MIN_BYTES="${BACKUP_MIN_BYTES:-1048576}"   # 1 MiB floor for a real backup
+
 do_backup() {
   local dir="$1" bk_dir="$2" label="$3"
   mkdir -p "$bk_dir"
   local ts_tag
   ts_tag="$(date +%Y%m%d-%H%M%S)-${IMAGE_TAG}"
   local out="${bk_dir}/${ts_tag}.tar.gz"
+  local tar_err
+  tar_err="$(mktemp)"
   echo "Backup [$label] → $out"
-  # -C into parent so tar entries are relative to the mount root.
-  if ! tar -czf "$out" -C "$dir" . 2>/dev/null; then
-    echo "ERROR: backup failed for $label ($dir → $out)" >&2
-    return 1
-  fi
-  local size
-  size="$(du -h "$out" | cut -f1)"
-  echo "  size=$size"
-  return 0
+
+  # -C into the mount root so archive entries are relative.
+  # `--warning=no-file-changed` demotes the most common exit-1 source, but
+  # older tar builds may still emit exit 1 for other benign reasons — we
+  # still validate the exit code below.
+  set +e
+  tar --warning=no-file-changed -czf "$out" -C "$dir" . 2>"$tar_err"
+  local rc=$?
+  set -e
+
+  local size_bytes=0
+  [[ -f "$out" ]] && size_bytes="$(stat -c%s "$out" 2>/dev/null || echo 0)"
+  local size_human="—"
+  [[ -f "$out" ]] && size_human="$(du -h "$out" 2>/dev/null | cut -f1)"
+
+  case "$rc" in
+    0)
+      echo "  size=${size_human}"
+      rm -f "$tar_err"
+      return 0
+      ;;
+    1)
+      # Warnings (typically "file changed as we read it" on SQLite WAL /
+      # ChromaDB files). Accept if the archive exists and looks real.
+      if [[ -f "$out" ]] && [[ "$size_bytes" -ge "$BACKUP_MIN_BYTES" ]]; then
+        echo "  size=${size_human}"
+        echo "  WARN [tar exit 1, non-fatal]: archive produced despite warnings" >&2
+        # Surface the first few warning lines so operators can spot real trouble.
+        if [[ -s "$tar_err" ]]; then
+          echo "  --- tar stderr (first 5 lines) ---" >&2
+          head -n 5 "$tar_err" >&2
+          echo "  --- end tar stderr ---" >&2
+        fi
+        rm -f "$tar_err"
+        return 0
+      fi
+      echo "ERROR: backup [$label] tar exit=1 but archive missing or too small (${size_bytes} bytes)" >&2
+      [[ -s "$tar_err" ]] && cat "$tar_err" >&2
+      rm -f "$tar_err"
+      return 1
+      ;;
+    *)
+      echo "ERROR: backup [$label] tar exit=${rc} (fatal), archive=${size_bytes} bytes at ${out}" >&2
+      [[ -s "$tar_err" ]] && cat "$tar_err" >&2
+      rm -f "$tar_err"
+      return 1
+      ;;
+  esac
 }
 
 BACKUP_SKIPPED=0
