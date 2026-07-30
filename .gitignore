@@ -8,6 +8,8 @@ node_modules
 .env
 .env.*
 !.env.example
+!.env.local-test.template
+!.env.local-test.fresh.template
 docker-compose.yaml.bak
 docker-compose.yaml.before-image-tag-change
 openwebui/

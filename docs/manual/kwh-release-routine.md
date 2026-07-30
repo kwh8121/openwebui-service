@@ -102,19 +102,69 @@ gh run watch <run-id> --repo kwh8121/openwebui-service --interval 45 --exit-stat
 
 Result image: `ghcr.io/kwh8121/openwebui-service:vX.Y.Z-kwh.N-rc.M`
 
-### 3.6 Staging deploy (SSH to staging host)
+### 3.6 Staging deploy (SSH to staging host) — **DEPRECATED (v4)**
+
+> **Deprecated:** this step deploys the RC image onto the production host using compose-level isolation only (separate port/data dir/network). Physical isolation is absent, so image defects can affect the co-located production container through resource contention or kernel/network paths. Replaced by **§3.6-b** (local production-mirror verification). Use §3.6 only for exceptional cases (local environment issues), and record the reason in the release notes.
+
+Variable names below reflect the actual `docker-compose.staging.yaml` (`OPENWEBUI_STAGING_*`), not the production variables shown in earlier revisions of this doc.
 
 ```bash
 cd /path/to/staging-deploy   # location of docker-compose.staging.yaml
-# ensure env file contains: WEBUI_NAME=Koreatimes  (see §5)
-export OPENWEBUI_IMAGE_TAG=vX.Y.Z-kwh.N-rc.M
-export OPENWEBUI_LOCAL_DATA=<staging-data-path>
-export OPENWEBUI_DEPLOY_ENV_FILE=<staging-env-file>
+export OPENWEBUI_STAGING_IMAGE_TAG=vX.Y.Z-kwh.N-rc.M
+export OPENWEBUI_STAGING_ENV_FILE=<staging-env-file>
+export OPENWEBUI_STAGING_DATA=<staging-data-path>
 docker compose -f docker-compose.staging.yaml pull
 docker compose -f docker-compose.staging.yaml up -d
 ```
 
 Run the smoke checklist (§6). Localhost-only port per compose file.
+
+### 3.6-b Local production-mirror verification (v4 primary release gate)
+
+**Replaces §3.6.** Runs the RC image locally in an isolated compose that mirrors production (openwebui + pipelines), against accumulated data preserved between releases. Verifies image integrity, upgrade migration, OAuth, pipelines, RAG, brand assets, and `/health`.
+
+**Immutable final-tag rule:** if verification finds a defect, do **not** rebuild or overwrite the tag. Cut the next kwh number (`kwh.N+1`) as a new RC and re-run.
+
+**One-time setup:**
+
+```bash
+docker login ghcr.io -u kwh8121                    # PAT: read:packages
+cp .env.local-test.template .env.local-test
+# Edit .env.local-test: fill in GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET.
+# Google Cloud Console → OAuth client → Authorized redirect URIs:
+#   http://127.0.0.1:8082/oauth/google/callback
+```
+
+**RC verification (default = preserve accumulated data):**
+
+```bash
+./scripts/local-test.sh vX.Y.Z-kwh.N-rc.M --allow-rc
+# Browser: http://127.0.0.1:8082 — walk the prod-mirror checklist
+#          (see docs/plan/local-test-workflow.md §"로컬 수동 검증 체크리스트")
+```
+
+**Option flags:**
+
+- `--fresh` — require empty data dirs (fresh-install migration check; separate from upgrade path)
+- `--no-backup` — skip the automatic pre-upgrade backup (data loss risk)
+- `--allow-rc` — required for RC tags (default guards against release-gate confusion)
+- `--reseed-cache` — force re-copy of baked-in model cache from the image. Cache is seeded from the image on first run (avoids the ~250 MB HuggingFace re-download caused by the bind mount overlaying the image's `/app/backend/data/cache/*`). Use this flag when a release ships new bundled models.
+
+**Backup / rollback:**
+
+```bash
+./scripts/local-test.sh --list-backups
+./scripts/local-test.sh --restore <timestamp>
+./scripts/local-test.sh --prune-backups --keep 5
+```
+
+**Teardown (data dirs preserved):**
+
+```bash
+./scripts/local-test.sh --down
+```
+
+Backups live at `${OPENWEBUI_LOCAL_TEST_DATA}.backups/` and `${PIPELINES_LOCAL_TEST_DATA}.backups/` (defaults: `$HOME/openwebui-local-test-data.backups` and `$HOME/openwebui-local-test-pipelines.backups`).
 
 ### 3.7 Open PR integration → main
 
@@ -145,6 +195,16 @@ git push origin vX.Y.Z-kwh.N
 ```
 
 Monitor the build; verify success before touching production.
+
+### 3.9-b Local final-tag re-verification (v4)
+
+Re-run **§3.6-b** with the final tag against the same accumulated local data. This is the second gate — the RC image was already validated in §3.6-b before merge, and this run confirms the final image (identical content, but a new immutable tag) still passes.
+
+```bash
+./scripts/local-test.sh vX.Y.Z-kwh.N        # no --allow-rc for final tags
+```
+
+If this fails: same immutable-tag rule applies (do not rebuild; cut `kwh.N+1` and restart from §3.5). Production deploy is halted.
 
 ### 3.10 Production deploy (SSH to prod host)
 
