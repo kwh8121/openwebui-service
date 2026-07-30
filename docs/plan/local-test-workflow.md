@@ -457,7 +457,7 @@ cp .env.local-test.template .env.local-test                        # 자격 증�
   - 권장 2: §3.9-b 도입부에 immutable 최종 태그 실패 처리 규칙(같은 태그 재빌드 금지, 다음 kwh 번호로 스테이징부터 재진행) 삽입
   - 권장 3: 태그 정규식 엄격화 — 기본은 최종 태그 전용, `--allow-rc` 명시 시에만 RC 태그 허용 (스테이징 게이트 대체 오용 방지)
   - "구현 완료 후 검증 절차"에 태그 엄격 케이스 및 empty-dir abort 검증 케이스 추가
-- **v4** (본 문서, 스테이징 대체 승격):
+- **v4** (스테이징 대체 승격):
   - 발견: 기존 스테이징(`docker-compose.staging.yaml`)은 프로덕션과 동일 호스트에 compose 레벨 격리만 되어 물리 격리 없음 → 검증 리스크가 실질적으로 프로덕션에 노출됨
   - 포지셔닝: "추가 방어선(v3)" → **"릴리스 게이트로서의 스테이징 대체(v4)"**
   - env: `.env.local-test.template`을 프로덕션 미러(OAuth on, Google OIDC, pipelines URL)로 재작성. 별도 fresh 모드용 `.env.local-test.fresh.template` 신규
@@ -467,3 +467,9 @@ cp .env.local-test.template .env.local-test                        # 자격 증�
   - 검증 스코프: OAuth 전체 흐름·pipelines·RAG·upgrade 마이그레이션 모두 로컬 커버
   - 워크플로: RC로 로컬 검증 → PR → 최종 태그 → 로컬 재검증 → 프로덕션 배포 (2단계 게이트)
   - `docker-compose.staging.yaml`은 유지하되 deprecation notice 예정
+- **v4.1** (본 문서, 첫 실행 지연 해소):
+  - 발견: fork의 GHCR 이미지는 non-slim(`USE_SLIM=false`)이라 embedding/whisper/tiktoken 모델이 이미지의 `/app/backend/data/cache/*`에 baked-in되지만, `docker-compose.local-test.yaml`이 빈 host 디렉터리를 `/app/backend/data`에 bind mount하여 baked-in cache를 완전히 가림 → 컨테이너 첫 실행 시 HuggingFace에서 ~250 MB 재다운로드 발생
+  - 스크립트 추가: 이미지 pull 직후, compose up 이전에 **cache seed** 단계 삽입. 첫 실행(또는 `--reseed-cache` 지정) 시 `docker create` + `docker cp`로 이미지의 `/app/backend/data/cache`를 host bind mount에 복사
+  - 신규 플래그: `--reseed-cache` (다음 릴리스 이미지에 새 baked-in 모델이 추가된 경우 강제 재복사)
+  - fallback: 이미지가 USE_SLIM=true로 빌드되어 cache가 없으면 경고 후 진행 (기존 runtime 다운로드 동작 유지)
+  - 재빌드 불필요 — script-only 변경. compose·env·이미지 무변경
