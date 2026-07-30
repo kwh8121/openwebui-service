@@ -9,7 +9,7 @@
 #   Replaces the co-located "staging on prod host" gate.
 #
 # Usage:
-#   ./scripts/local-test.sh <image-tag> [--fresh] [--no-backup] [--allow-rc]
+#   ./scripts/local-test.sh <image-tag> [--fresh] [--no-backup] [--allow-rc] [--reseed-cache]
 #   ./scripts/local-test.sh --down
 #   ./scripts/local-test.sh --list-backups
 #   ./scripts/local-test.sh --restore <timestamp>
@@ -19,6 +19,9 @@
 #   --fresh          Require an empty data directory (verify fresh-install migration)
 #   --no-backup      Skip the automatic pre-upgrade backup (data loss risk)
 #   --allow-rc       Accept RC tags (v...-kwh.N-rc.M) — required for local RC verification
+#   --reseed-cache   Force re-copy of baked-in model cache from the image (use when
+#                    a new release ships new bundled models; otherwise seeds once
+#                    on first run and reuses thereafter).
 #   --down           Stop and remove containers (bind-mount data dirs are kept)
 #   --list-backups   Print backup history and exit
 #   --restore <ts>   Restore data + pipelines dirs from a backup timestamp
@@ -55,6 +58,7 @@ MODE="verify"          # verify | down | list_backups | restore | prune_backups
 FRESH=0
 NO_BACKUP=0
 ALLOW_RC=0
+RESEED_CACHE=0
 RESTORE_TS=""
 KEEP=5
 YES=0
@@ -72,6 +76,7 @@ while [[ $# -gt 0 ]]; do
     --fresh)         FRESH=1 ;;
     --no-backup)     NO_BACKUP=1 ;;
     --allow-rc)      ALLOW_RC=1 ;;
+    --reseed-cache)  RESEED_CACHE=1 ;;
     --down)          MODE="down" ;;
     --list-backups)  MODE="list_backups" ;;
     --restore)
@@ -422,6 +427,41 @@ docker pull ghcr.io/open-webui/pipelines:main || {
   echo "ERROR: docker pull failed for pipelines" >&2
   exit 7
 }
+
+# --- Cache seed (v4.1) --------------------------------------------------
+# The fork's GHCR image is built non-slim (USE_SLIM=false), so RAG embedding,
+# whisper, tiktoken, etc. are baked into /app/backend/data/cache/* inside the
+# image. Our bind mount at /app/backend/data hides those baked-in files, so
+# the first launch would otherwise re-download ~250 MB from HuggingFace.
+# On first run (or when --reseed-cache is set), copy the cache subtree from
+# the freshly pulled image into the host bind-mount so subsequent starts and
+# actual usage skip the network fetch.
+CACHE_DIR="${DATA_DIR%/}/cache"
+need_seed=0
+if [[ $RESEED_CACHE -eq 1 ]]; then
+  need_seed=1
+elif [[ ! -d "$CACHE_DIR" ]] || [[ -z "$(ls -A "$CACHE_DIR" 2>/dev/null)" ]]; then
+  need_seed=1
+fi
+
+if [[ $need_seed -eq 1 ]]; then
+  echo "Seeding baked-in model cache from ${FULL_IMAGE} → ${CACHE_DIR}..."
+  if [[ $RESEED_CACHE -eq 1 && -d "$CACHE_DIR" ]]; then
+    echo "  --reseed-cache: removing existing cache first"
+    rm -rf "$CACHE_DIR"
+  fi
+  tmp_cid="$(docker create "$FULL_IMAGE")"
+  if ! docker cp "$tmp_cid:/app/backend/data/cache" "${DATA_DIR%/}/" 2>/dev/null; then
+    echo "WARN: image has no /app/backend/data/cache (probably built with USE_SLIM=true)" >&2
+    echo "WARN: models will be downloaded at runtime from HuggingFace." >&2
+  else
+    size="$(du -sh "$CACHE_DIR" 2>/dev/null | cut -f1)"
+    echo "  cache seeded (size=${size}) — runtime model download avoided."
+  fi
+  docker rm "$tmp_cid" >/dev/null
+else
+  echo "Cache already present at ${CACHE_DIR} — skipping seed (use --reseed-cache to force)."
+fi
 
 # --- Start compose ------------------------------------------------------
 export_compose_vars

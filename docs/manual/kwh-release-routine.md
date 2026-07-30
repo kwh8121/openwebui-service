@@ -148,6 +148,7 @@ cp .env.local-test.template .env.local-test
 - `--fresh` — require empty data dirs (fresh-install migration check; separate from upgrade path)
 - `--no-backup` — skip the automatic pre-upgrade backup (data loss risk)
 - `--allow-rc` — required for RC tags (default guards against release-gate confusion)
+- `--reseed-cache` — force re-copy of baked-in model cache from the image. Cache is seeded from the image on first run (avoids the ~250 MB HuggingFace re-download caused by the bind mount overlaying the image's `/app/backend/data/cache/*`). Use this flag when a release ships new bundled models.
 
 **Backup / rollback:**
 
