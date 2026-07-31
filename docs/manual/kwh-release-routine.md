@@ -277,7 +277,16 @@ After each staging or production deploy:
 **Suggestion prompt behavior (post kwh.2)**
 - [ ] Clicking a suggestion card populates the input instead of auto-sending (for users with no explicit setting)
 
-## 7. Production Deployment (SSH block, copy-paste)
+## 7. Production Deployment (SSH block, copy-paste) — **DEPRECATED (2026-07-31)**
+
+> **Deprecated by protocol v1.0** in `docs/manual/github-control-plane-local-agent-handoff.ko.md`.
+>
+> Production deployments are now coordinated through GitHub (Issue evidence → maintainer `Environment` approval → production agent executes per per-release deploy guide). See the handoff doc §4 Required Release Flow and §5 Per-Release Deploy Guide Template. Example instance: `docs/manual/kwh-deploy-guide-v0.11.0-kwh.1.md`.
+>
+> The commands below are retained as a fallback reference for exceptional cases when the handoff infrastructure is unavailable (e.g., GitHub outage, self-hosted runner offline). If used, record the reason in the release notes and the associated Issue.
+
+**Legacy manual SSH steps (fallback only):**
+
 
 ```bash
 ssh <prod-server>
