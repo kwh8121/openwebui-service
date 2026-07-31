@@ -73,6 +73,22 @@ jobs:
             exit 1
           fi
 
+      - name: Validate release evidence and deploy guide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+          GUIDE_COMMIT: ${{ inputs.guide_commit }}
+        run: |
+          set -euo pipefail
+          guide_path="docs/manual/kwh-deploy-guide-${RELEASE_TAG}.md"
+          gh api "repos/${GITHUB_REPOSITORY}/contents/${guide_path}?ref=${GUIDE_COMMIT}" --silent >/dev/null
+          comparison=$(gh api "repos/${GITHUB_REPOSITORY}/compare/${RELEASE_TAG}...main" --jq .status)
+          if [[ "$comparison" != "identical" && "$comparison" != "behind" ]]; then
+            echo "::error::release tag ${RELEASE_TAG} is not on main lineage"
+            exit 1
+          fi
+          echo "GUIDE_PATH=${guide_path}" >> "$GITHUB_ENV"
+
       - name: Validate deploy environment
         run: |
           set -euo pipefail
@@ -142,21 +158,12 @@ jobs:
           export PIPELINES_LOCAL_DATA="${PIPELINES_DATA}"
 
           docker compose -f "${COMPOSE_FILE}" -p "${COMPOSE_PROJECT}" stop openwebui
+          echo "OPENWEBUI_STOPPED=true" >> "$GITHUB_ENV"
 
-          # WAL-safe: openwebui is stopped, WAL is committed to main DB before tar.
-          # --warning=no-file-changed handles benign SQLite WAL races if any.
-          # --ignore-failed-read tolerates permission-denied files (HF cache etc).
-          if ! tar --warning=no-file-changed --ignore-failed-read \
-                   -czf "${backup_path}" -C "${DEPLOY_DIR}" openwebui; then
-            rc=$?
-            # Accept exit=1 if archive exists and looks real
-            if [[ -f "${backup_path}" ]] && [[ $(stat -c%s "${backup_path}") -gt 1048576 ]]; then
-              echo "::warning::tar exit=${rc} but archive OK (size $(stat -c%s "${backup_path}") bytes)"
-            else
-              echo "::error::backup failed: tar exit=${rc}, archive missing or too small"
-              exit 1
-            fi
-          fi
+          # WAL-safe: Open WebUI is stopped before archiving. Pipelines data is
+          # included because it is part of the production recovery boundary.
+          tar -czf "${backup_path}" -C "${DEPLOY_DIR}" openwebui -C /app pipelines
+          tar -tzf "${backup_path}" >/dev/null
 
           size=$(du -h "${backup_path}" | cut -f1)
           echo "BACKUP_PATH=${backup_path}" >> "$GITHUB_ENV"
@@ -189,6 +196,22 @@ jobs:
           export PIPELINES_LOCAL_DATA="${PIPELINES_DATA}"
           docker compose -f "${COMPOSE_FILE}" -p "${COMPOSE_PROJECT}" pull openwebui
           docker compose -f "${COMPOSE_FILE}" -p "${COMPOSE_PROJECT}" up -d --no-deps openwebui
+          echo "NEW_CONTAINER_STARTED=true" >> "$GITHUB_ENV"
+
+      - name: Restore previous service after pre-start failure
+        if: failure() && env.OPENWEBUI_STOPPED == 'true' && env.NEW_CONTAINER_STARTED != 'true'
+        run: |
+          set -euo pipefail
+          if [[ -z "${CURRENT_TAG:-}" ]]; then
+            echo "::error::previous image tag is unavailable; cannot restart automatically"
+            exit 0
+          fi
+          cd "${DEPLOY_DIR}"
+          export OPENWEBUI_IMAGE_TAG="${CURRENT_TAG}"
+          export OPENWEBUI_LOCAL_DATA="${DATA_DIR}"
+          export OPENWEBUI_DEPLOY_ENV_FILE="${ENV_FILE}"
+          export PIPELINES_LOCAL_DATA="${PIPELINES_DATA}"
+          docker compose -f "${COMPOSE_FILE}" -p "${COMPOSE_PROJECT}" up -d --no-deps openwebui
 
       # ─── Migration monitoring + /health polling ────────────────────
       - name: Wait for /health (Alembic runs during boot)
@@ -197,6 +220,9 @@ jobs:
           deadline=$(( $(date +%s) + HEALTH_TIMEOUT_SECONDS ))
           while (( $(date +%s) < deadline )); do
             if curl -sf --max-time 5 "${HEALTH_URL}" >/dev/null 2>&1; then
+              curl -sf --max-time 5 http://localhost/_app/version.json >/dev/null
+              curl -sf --max-time 5 http://localhost/manifest.json >/dev/null
+              curl -sf --max-time 5 http://localhost:9099/openapi.json >/dev/null
               echo "HEALTH_STATUS=OK" >> "$GITHUB_ENV"
               echo "/health reached 200"
               exit 0
@@ -221,11 +247,9 @@ jobs:
             echo "::error::openwebui state is '${state}', expected 'running'"
             exit 1
           fi
-          echo "--- last 100 log lines (openwebui) ---"
-          logs=$(docker compose -f "${COMPOSE_FILE}" -p "${COMPOSE_PROJECT}" logs --tail 100 openwebui 2>&1 || true)
-          echo "${logs}"
-          echo "--- end logs ---"
-          if grep -Eiq 'Traceback|Failed to start|sqlalchemy\.exc' <<<"${logs}"; then
+          logs_file="${RUNNER_TEMP}/openwebui-last-100.log"
+          docker compose -f "${COMPOSE_FILE}" -p "${COMPOSE_PROJECT}" logs --tail 100 openwebui >"${logs_file}" 2>&1 || true
+          if grep -Eiq 'Traceback|Failed to start|sqlalchemy\.exc' "${logs_file}"; then
             echo "::error::startup error keywords detected in openwebui logs"
             exit 1
           fi
@@ -243,8 +267,8 @@ jobs:
 
           Image digest: \`${NEW_DIGEST}\`
           Backup retention: \`${BACKUP_PATH}\`
-          Technical smoke: PASS (container running, /health 200, logs clean)
-          Guide followed: \`docs/manual/kwh-deploy-guide-${{ inputs.tag }}.md\` at commit \`${{ inputs.guide_commit }}\`
+          Technical smoke: PASS (container running, health/version/manifest, Pipelines API, logs clean)
+          Guide followed: \`${GUIDE_PATH}\` at commit \`${{ inputs.guide_commit }}\`
           Awaiting user browser acceptance: OAuth, model chat, upload/RAG, branding/splash, custom tools as applicable.
           EOF
           )"
