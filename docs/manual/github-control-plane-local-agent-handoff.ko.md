@@ -1,282 +1,265 @@
-# GitHub Control Plane — Local ↔ Production Agent Handoff Protocol
+# GitHub Control Plane: Local Development Agent Handoff
 
-Protocol version: **v1.0** (2026-07-31)
+**Protocol version: v1.1** (2026-07-31)
 
-This document is the top-of-hierarchy authority for how the local development
-agent (running in the maintainer's WSL2 workstation) and the production
-deployment agent (running on the production host) coordinate releases through
-GitHub. It supersedes `docs/manual/kwh-release-routine.md §7` (manual SSH
-deploy path, deprecated) and takes precedence over other release docs when in
-conflict.
+이 문서는 로컬 WSL 개발 에이전트와 원격 프로덕션 배포 에이전트가 GitHub을 유일한 조율 표면으로 삼아 릴리스·배포·상태 정보를 교환하는 규약이다. 관리자가 두 터미널 사이에서 각 에이전트의 응답을 복사·붙여넣기하는 부담을 제거하는 것이 목적이다.
 
-## Purpose
+## 문서 우선순위와 계층
 
-Remove the maintainer's manual copy-paste between local and production
-terminals. GitHub becomes the single coordination surface: Issues carry the
-handoff evidence, GitHub Actions carries the executable steps, and the
-`production` Environment approval is the human gate. Each agent operates in
-its own lane and reads/writes only through GitHub-observable artifacts.
+이 문서는 fork 저장소의 릴리스·배포 조율 문서 계층에서 **최상위 권위**를 가진다. 다른 문서와 충돌하면 이 문서가 우선한다.
 
-## 1. Prerequisites
+1. **이 문서** (`docs/manual/github-control-plane-local-agent-handoff.ko.md`) — 로컬↔프로덕션 에이전트 조율 프로토콜
+2. `docs/manual/github-actions-ghcr-release-deployment.md` — CI/CD 파이프라인 mechanics (tag 규칙, GHCR 규약)
+3. `docs/manual/kwh-release-routine.md` — 일반 릴리스 참고. §7(수동 SSH 배포)은 이 문서에 의해 **DEPRECATED**, 나머지 섹션은 참고용으로 유지
+4. Per-release deploy guides (`docs/manual/kwh-deploy-guide-v<X.Y.Z>-kwh.<N>.md`) — 릴리스별 실행 아티팩트
 
-This protocol is executable only when the following infrastructure exists.
-Halt and escalate if any is missing on a real release:
+## 사전 요건 (Prerequisites)
 
-| Requirement | Location | Status as of protocol v1.0 |
+이 프로토콜은 아래 인프라가 준비된 상태에서 완전 작동한다. 실제 릴리스 시 항목이 누락돼 있으면 중단하고 관리자 확인을 받는다.
+
+| 요건 | 위치 | v1.1 시점 상태 |
 |---|---|---|
-| Production `Environment` with required reviewer `kwh8121` | GitHub repo → Environments | ✅ exists (created 2026-07-30) |
-| Per-release deploy guide template | `docs/manual/kwh-deploy-guide-v<X.Y.Z>-kwh.<N>.md` | ✅ example at `v0.11.0-kwh.1` |
-| GHCR image build workflow | `.github/workflows/docker.yaml` (trigger `v*-kwh.*` tag) | ✅ exists |
-| Self-hosted runner bound to `production` Environment | Prod host, runner label documented | ⚠️ implementation deferred; interim mode uses human production agent |
-| `Deploy approved production release` workflow | `.github/workflows/deploy-approved-production-release.yaml` | ⚠️ implementation deferred; interim mode uses per-release deploy guide executed by production agent |
-| `Production deployment request` Issue form | `.github/ISSUE_TEMPLATE/production_deployment_request.yaml` | ⚠️ implementation deferred; interim mode uses free-form Issue matching §6.1 schema |
+| `production` GitHub Environment (required reviewer: `kwh8121`) | GitHub repo → Environments | ✅ 존재 (2026-07-30 생성) |
+| Per-release deploy guide 파일 | `docs/manual/kwh-deploy-guide-v<X.Y.Z>-kwh.<N>.md` | ✅ 예시 인스턴스 `v0.11.0-kwh.1` 존재 |
+| GHCR image build workflow | `.github/workflows/docker.yaml` (trigger: `v*-kwh.*` tag) | ✅ 존재 |
+| self-hosted runner (production Environment 바인딩) | 프로덕션 호스트 | ⚠️ 구현 지연. **interim mode**: 사람 프로덕션 에이전트가 per-release deploy guide를 따라 수동 실행 |
+| `Deploy approved production release` workflow | `.github/workflows/deploy-approved-production-release.yaml` | ⚠️ 구현 지연. **interim mode**: workflow dispatch 대신 사람 프로덕션 에이전트가 수동 실행 |
+| **Production deployment request** Issue form | `.github/ISSUE_TEMPLATE/production_deployment_request.yaml` | ⚠️ 구현 지연. **interim mode**: 로컬 에이전트가 free-form Issue를 §"배포 요청 계약" 스키마대로 작성 |
 
-**Interim mode (protocol v1.0)**: while the ⚠️ items are being implemented,
-the production deployment agent may be a human operator who reads the Issue +
-per-release deploy guide and executes the steps manually. The Contracts in §6
-still bind both agents. Fully automated Layer B (workflow dispatch) is a
-target for protocol v1.1.
+**Interim mode 정의**: ⚠️ 항목은 이 프로토콜의 자동화 목표 상태다. 현재는 사람 프로덕션 에이전트가 §"필수 릴리스 흐름"과 per-release deploy guide를 읽고 수동으로 실행하며, §"프로덕션 에이전트 Issue 응답 계약"에 규정된 스키마로 Issue에 응답한다. 전체 자동화(workflow dispatch)는 v1.2 목표.
 
-## 2. Actors and Boundaries
+## 역할 범위
 
-| Actor | Owns | Never does |
-|---|---|---|
-| **Local development agent** (WSL2) | Code changes on `feature/*`, integration into `integration/vX.Y.Z`, local production-mirror verification, RC and final tag creation, GHCR build wait, per-release deploy guide authoring, Issue evidence submission | SSH to production, run `docker compose` on production, create production backups, execute deployment, dispatch the deployment workflow |
-| **Production deployment agent** (prod host) | Reading the Issue + per-release deploy guide, executing the deploy (either by dispatching the workflow or by following the guide manually in interim mode), production backup, technical smoke, Issue reply comments per §6.2, incident handling per §7 | Modify code, create tags, rewrite tags, act without an Issue reference |
-| **Maintainer (`kwh8121`)** | Approve production `Environment` gate, perform browser-only acceptance checks per §6.3, adjudicate incidents per §7, sign off release completion | Directly SSH between hosts as a manual relay of agent outputs; commit or push on behalf of the local agent from production; skip Environment approval |
+로컬 개발 에이전트는 코드 변경, CI, RC/스테이징 검증, 최종 릴리스 증적, 프로덕션 배포 요청 Issue 작성, per-release deploy guide 작성 및 커밋을 담당한다. 프로덕션에 SSH 접속하거나 Docker Compose를 실행하고, 운영 데이터를 백업하거나, 프로덕션 배포 workflow를 dispatch하지 않는다.
 
-## 3. Coordination Surface
+프로덕션 배포 에이전트는 승인된 Issue를 검토하고, per-release deploy guide를 실행(automation 시 dispatch, interim mode에서 수동)하고, 운영 백업, 배포, 기술 스모크, 장애 대응, Issue 결과 기록을 담당한다.
 
-Every state transition is a GitHub artifact:
+사용자(관리자, `kwh8121`)는 GitHub `production` Environment를 승인하고, 브라우저 전용 검수를 수행하고, incident 발생 시 롤백/hotfix/다음 릴리스 여부를 결정한다.
 
-```
-Local agent          GitHub                      Production agent      Maintainer
-────────────────     ──────────────────────      ──────────────────    ──────────
-git push tag         → Actions Run (build)
-                     → GHCR image + digest
-Issue evidence   ──▶ Issue (open, form-filled)
-                     Deploy guide file @ SHA
-                                                                        Environment approve
-                     ← Dispatch workflow      ←  Prod agent triggers
-                     Actions Run (deploy)     ←  or begins manual exec
-                                                 Backup created
-                                                 Migration ran
-                     ← Issue reply comment    ←  §6.2 (a) dispatched
-                     ← Issue reply comment    ←  §6.2 (b) progress
-                     ← Issue reply comment    ←  §6.2 (c) success
-                                                                        Browser acceptance
-                     ← Issue reply comment    ←                        §6.3 sign-off
-                     Issue closed
+## 필수 릴리스 흐름
+
+1. `feature/*` 작업을 `integration/vX.Y.Z`를 거쳐 `main`으로 통합한다.
+2. `main` 병합 전에 필수 CI와 로컬 프로덕션 미러 검증(`scripts/local-test.sh <RC tag> --allow-rc`)을 완료한다.
+3. 병합된 `main` 커밋에 다음 형식의 최종 annotated tag를 만든다.
+
+```text
+v<major>.<minor>.<patch>-kwh.<release>
 ```
 
-## 4. Required Release Flow
+4. **Build and publish GHCR release image** workflow가 성공할 때까지 기다린다.
+5. 최종 tag, 전체 `main` SHA, Actions build URL, GHCR image digest를 기록한다.
+6. 최종 tag에 대해 로컬 재검증(`scripts/local-test.sh <final tag>`, 축적 데이터 유지)을 수행한다.
+7. per-release deploy guide를 `docs/manual/kwh-deploy-guide-v<X.Y.Z>-kwh.<N>.md`로 §"Per-Release Deploy Guide Template" 스펙에 따라 작성한다.
+8. deploy guide를 `feature/docs-* → integration/vX.Y.Z → main` 흐름으로 커밋해 안정 경로에서 참조 가능하도록 한다.
+9. **Production deployment request** Issue를 §"배포 요청 계약"에 따라 작성해 제출한다.
+10. Issue 제출 뒤 중단한다. 사용자가 프로덕션 터미널에 붙여넣을 SSH·Docker Compose·백업·롤백 명령을 제공하지 않으며 배포 workflow도 dispatch하지 않는다.
 
-1. Develop changes on `feature/*` and merge through `integration/vX.Y.Z`.
-2. Local production-mirror verification (`scripts/local-test.sh <RC tag> --allow-rc`) must pass before opening the PR to `main`.
-3. Complete required CI checks; merge PR to `main`.
-4. Create the final annotated tag on the merged `main` commit. Only this format:
+## Per-Release Deploy Guide Template
 
-   ```text
-   v<major>.<minor>.<patch>-kwh.<release>
-   ```
+각 릴리스는 `docs/manual/kwh-deploy-guide-v<X.Y.Z>-kwh.<N>.md`를 저장소에 커밋한다. 이 파일은 프로덕션 에이전트가 실행하는 유일한 명령 소스이며 아래 섹션을 이 순서로 반드시 포함한다. 표준 인스턴스: `docs/manual/kwh-deploy-guide-v0.11.0-kwh.1.md`.
 
-5. Wait for **Build and publish GHCR release image** to succeed. Record the Run URL and the image digest.
-6. Local production-mirror re-verification (`scripts/local-test.sh <final tag>`) against the final tag before requesting deployment.
-7. Author the per-release deploy guide at `docs/manual/kwh-deploy-guide-v<X.Y.Z>-kwh.<N>.md`, matching the §5 template.
-8. Commit the deploy guide via `feature/docs-* → integration/vX.Y.Z → main` flow so the file is reachable at a stable path on `main`.
-9. Open the **Production deployment request** Issue populated per §6.1.
-10. Stop. The local agent does not send terminal commands to the maintainer and does not dispatch any deployment workflow.
+1. **Release identifiers** — 버전, main tip SHA, GHCR image tag, digest(또는 프로덕션 에이전트가 pull 후 취득 방법), git-SHA parity tag, Actions Run URL, upstream base, fork carryovers 요약, rollback target tag
+2. **Deployment overview** — 변경 내용, 실행될 Alembic 마이그레이션 (SHA + 이름), fork 보존 항목 요약
+3. **Prerequisites verification** — 경로·파일·compose project·현재 이미지·GHCR auth·env sanity·디스크
+4. **Pre-deployment backup (MANDATORY)** — WAL-safe 절차 (stop→tar), backup 경로 기록, 무결성 검증
+5. **Deployment execution** — env exports, compose config dry-run, pull, up -d --no-deps
+6. **Migration monitoring** — Alembic 로그 예상, "startup complete" 마커, /health polling
+7. **Post-deployment smoke checklist** — 소유권별 분할: 7.1 Authentication, 7.2 Data integrity, 7.3 Fork carryovers, 7.4 Functional smoke, 7.5 Version-specific spot check
+8. **Rollback procedure** — 8.1 이미지 롤백, 8.2 full 롤백 (backup 복원), 8.3 failed-upgrade 디렉터리 보존
+9. **Success markers to record** — 프로덕션 에이전트가 Issue 코멘트에 남길 값 목록
+10. **Appendix A. Environment variable reference** — compose env 전체 인벤토리
+11. **Appendix B. External references** — 문서 우선순위 재확인
 
-## 5. Per-Release Deploy Guide Template (Layer B)
+각 guide는 릴리스 스코프다. rollback target, digest, 마이그레이션 목록이 릴리스마다 다르므로 편집 없이 재사용 불가.
 
-Every per-release deploy guide (`kwh-deploy-guide-v<X.Y.Z>-kwh.<N>.md`) MUST include these sections in this order. The production agent parses this structure. Example instance: `docs/manual/kwh-deploy-guide-v0.11.0-kwh.1.md`.
+## 배포 요청 계약
 
-1. **Release identifiers** — version, main tip SHA, GHCR image tag, image digest (or explicit "agent fetches — see §3.4"), git-SHA parity tag, Actions Run URL, base upstream tag, fork carryovers summary, rollback target tag.
-2. **Deployment overview** — what changes, upstream + fork feature summary, list of Alembic migrations that will run (with SHAs), fork carryovers preserved list.
-3. **Prerequisites verification** — path checks, compose project name check, current running image check, GHCR auth + image digest capture, environment file sanity, disk space check.
-4. **Pre-deployment backup (MANDATORY)** — WAL-safe procedure (stop → tar), backup path recording, integrity verification, optional online sqlite `.backup` alternative.
-5. **Deployment execution** — compose env exports, dry-run config verification, `pull openwebui`, `up -d --no-deps openwebui`, immediate post-up sanity.
-6. **Migration monitoring** — expected Alembic log lines, "startup complete" marker, health poll, escalation threshold.
-7. **Post-deployment smoke checklist** — split by owner:
-   7.1 Authentication verification (may include configuration caveats)
-   7.2 Data integrity (upgrade migration verification)
-   7.3 Fork carryovers (Koreatimes brand, insertSuggestionPrompt, etc.)
-   7.4 Functional smoke (models, pipelines, RAG)
-   7.5 Version-specific spot check (e.g., UI redesign for v0.11.x)
-8. **Rollback procedure** — image-only rollback (§8.1) and full rollback with data restore (§8.2), including the failed-upgrade retention directive.
-9. **Success markers to record** — table of values the production agent must capture and post back in the Issue reply.
-10. **Appendix A. Environment-variable reference** — full compose env inventory for this deploy.
-11. **Appendix B. External references** — the applicable doc hierarchy (this handoff → ghcr-release-deployment → kwh-release-routine → this guide).
+Issue 제목: `Production deployment request: v<X.Y.Z>-kwh.<N>`
 
-The template is release-scoped: rollback target, digest, and migration list differ per release. Do not reuse without editing.
+프로덕션 배포 요청에는 반드시 다음을 포함한다.
 
-## 6. Contracts
+- 최종 immutable 릴리스 tag (예: `v0.11.0-kwh.1`)
+- tag가 가리키는 전체 40자 commit SHA
+- 성공한 GHCR build Run URL과 image digest (`sha256:<64-hex>`)
+- **Per-release deploy guide 경로 및 참조 SHA** (예: `docs/manual/kwh-deploy-guide-v0.11.0-kwh.1.md` at commit `<SHA>`)
+- 로컬 검증 결과 (RC 및 최종 태그 로컬 프로덕션 미러 검증 pass/fail, `scripts/local-test.sh` 버전)
+- 예상 마이그레이션과 호환성 위험 (Alembic 신규 마이그레이션 개수 및 ID)
+- Fork carryover 검증 결과 (브랜드 자산, `insertSuggestionPrompt=true` 기본, `WEBUI_NAME` suffix 제거)
+- 알려진 문제와 사용자 브라우저 검수 항목
+- 이전 immutable rollback tag (현재 프로덕션에서 실행 중인 tag)
 
-### 6.1 Local Agent → Issue Evidence
+OAuth credential, package token, API key, DB 내용, cookie, 사용자 데이터는 Issue에 기록하지 않는다.
 
-Issue title: `Production deployment request: v<X.Y.Z>-kwh.<N>`
+## 프로덕션 에이전트 Issue 응답 계약
 
-Required fields (form or free-form matching this schema):
+프로덕션 에이전트는 배포 Issue에 아래 단계별 형식으로 상태를 남긴다. 경로, digest, Actions URL은 기록할 수 있지만 비밀값과 민감 로그 전문은 기록하지 않는다.
 
-- **Final immutable release tag** — `vX.Y.Z-kwh.N` (never `main`, never `latest`, never an RC).
-- **Full commit SHA targeted by the tag** — 40-char main tip.
-- **Successful GHCR build Run URL** — Actions Run link.
-- **GHCR image digest** — `sha256:<64-hex>` (fetched via `docker inspect` after pull, or GHCR web UI).
-- **Per-release deploy guide** — `docs/manual/kwh-deploy-guide-v<X.Y.Z>-kwh.<N>.md` at commit `<SHA>` (link to the exact commit).
-- **Local verification results** — one line per phase: RC local verification pass/fail, final-tag local re-verification pass/fail, verifier tool version (e.g., v4.2), verifier commit SHA if applicable.
-- **Migration expectation and compatibility risk** — count and IDs of Alembic migrations that will run, any known non-reversibility.
-- **Fork carryover validation** — brand assets present, `insertSuggestionPrompt=true` default preserved, `WEBUI_NAME` suffix removal preserved, tool version tags.
-- **Known issues and browser-only checks required** — list of items the maintainer must eyeball post-deploy.
-- **Current immutable rollback tag** — the tag currently running in production.
+### 1. 배포 착수
 
-Never include: OAuth credentials, package tokens, API keys, database contents, cookies, user data.
-
-### 6.2 Production Agent → Issue Replies
-
-The production agent posts one comment per lifecycle event. Fixed schemas:
-
-**(a) Dispatched / Started**
 ```markdown
-Deployment started.
-Run: <Actions Run URL, or "manual (interim mode)">
+## Deployment dispatched
+
+Run: <GitHub Actions URL, or "manual (interim mode)">
 Runner: <label, or "human operator">
-Following guide: <deploy guide URL at commit SHA>
-ETA: ~<N> min
+Target: <release tag>
+Estimate: <optional estimate>
+Guide: `docs/manual/kwh-deploy-guide-v<X.Y.Z>-kwh.<N>.md` at commit <SHA>
 ```
 
-**(b) Progress checkpoint** (post at least after backup, after migration)
+### 2. 진행 체크포인트
+
 ```markdown
+## Deployment checkpoint
+
 Backup: <path> (<size>)
-Migrations applied: <N> / <expected>
-Health: <state, e.g., waiting/healthy>
+Migrations: <applied count or "not applicable">
+Health polling: started
 ```
 
-**(c) Success**
+### 3. 성공
+
 ```markdown
-Deployed successfully.
-Image digest: sha256:<64-hex>
-Technical smoke: PASS
-  - /health returned 200
-  - container logs clean (no Traceback|ERROR|Failed to start)
-  - key API endpoints reachable
+## Deployment success
+
+Image digest: sha256:<digest>
 Backup retention: <path>
-Awaiting user browser acceptance per §6.3.
+Technical smoke: PASS (container health, logs, health/version/manifest, Pipelines API)
+Guide followed: `docs/manual/kwh-deploy-guide-v<X.Y.Z>-kwh.<N>.md` at commit <SHA>
+Awaiting user browser acceptance: OAuth, model chat, upload/RAG, branding/splash, custom tools as applicable.
 ```
 
-**(d) Failure**
+### 4. 실패
+
 ```markdown
-FAILED at <stage from deploy guide, e.g., §4 backup / §5 execution / §6 migration / §7 smoke>.
-Cause: <one-line summary>
-Logs:
-<fenced code block, ≤50 lines, or a link to a paste>
-Rollback status: <auto-rolled-back to <tag> | halted, awaiting maintainer decision>
-Guide section referenced: §<N>.<M>
+## Deployment failed
+
+Stage: <pre-deploy backup | image pull | migration | health | technical smoke>
+Cause: <one-line safe summary>
+Run logs: <GitHub Actions URL, or code block ≤50 lines>
+Rollback status: <previous image restarted | halted for incident decision | restored from backup>
+Guide section: §<N>.<M> of `docs/manual/kwh-deploy-guide-v<X.Y.Z>-kwh.<N>.md`
 Next action required: <local agent | maintainer | ready to retry>
 ```
 
-### 6.3 Maintainer → Issue Acceptance
+## 관리자 브라우저 acceptance 코멘트 템플릿
 
-After the production agent posts (c) Success, the maintainer performs browser-only acceptance and posts one final comment:
+프로덕션 에이전트가 §3(성공) 코멘트를 남긴 후, 관리자는 브라우저 검수를 완료하고 아래 형식으로 Issue에 코멘트를 남긴다. 이 코멘트가 §"완료 기준" 4번을 충족한다.
 
 ```markdown
-Browser acceptance: <PASS | PASS with follow-up | FAIL>
+## Browser acceptance
+
+Result: <PASS | PASS with follow-up | FAIL>
+
 Checked:
-- Auth: <observation>
-- Brand (logo, splash, instance name, favicon): <observation>
-- Suggestion card UX: <observation>
-- Model chat: <observation>
-- RAG upload + citation: <observation>
-- Pipelines listing/connect: <observation>
-- Version-specific: <observation>
-Follow-up items (if any): <list, each with a suggested next-release ticket>
-Release accepted / rejected.
+- OAuth 로그인 및 세션 지속: <observation>
+- Brand (로고, 인스턴스명 접미사 없음, splash 라이트/다크, favicon): <observation>
+- 제안 카드 UX (자동 전송 안 됨): <observation>
+- 모델 대화 (응답 수신): <observation>
+- Upload/RAG (문서 → 질의 → 인용): <observation>
+- Pipelines (워크스페이스 리스팅 및 연결): <observation>
+- 버전별 spot check (예: v0.11.0 UI 재설계): <observation>
+
+Follow-up items (있으면): <목록, 각 항목별 tracking Issue 링크 권장>
+
+Release accepted.  <!-- 또는 -->  Release rejected: <이유>
 ```
 
-After a PASS comment, the Issue is closed. A FAIL comment triggers §7 incident handling.
+- `PASS` 또는 `PASS with follow-up` 코멘트 → Issue 닫음. Follow-up은 별도 tracking Issue로 이관.
+- `FAIL` → §"장애 처리와 권한"의 "browser acceptance 실패" 행 절차 진행.
 
-## 7. Incident Handling
+## 장애 처리와 권한
 
-Standing matrix. The production agent chooses actions from this table without waiting for guidance unless a row explicitly says "await maintainer".
+| 상황                               | 프로덕션 에이전트 즉시 조치                                                                                | 로컬 개발 에이전트 후속                         | 사용자/관리자 결정                                     |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------ |
+| 배포 전 백업 실패                  | 배포 중단. 컨테이너가 이미 멈췄다면 고정 스크립트가 이전 이미지를 재기동한다. Issue에 실패 기록.           | 디스크, 권한, 경로 원인 분석 지원.              | 필요 시 저장공간 또는 권한 조치.                       |
+| 이미지 pull 또는 배포 전 검증 실패 | 배포 중단. 컨테이너가 이미 멈췄다면 이전 이미지를 재기동한다.                                              | tag, digest, GHCR build 증적 확인.              | GHCR 권한 또는 패키지 정책 문제 시 조치.               |
+| Alembic 마이그레이션 실패          | 새 컨테이너 이후에는 자동 롤백하지 않는다. DB와 로그를 보존하고 Issue를 실패 상태로 기록한다.              | 원인 재현 및 수정 후 새 immutable kwh tag 준비. | 이미지 롤백 또는 백업 복구 여부를 승인.                |
+| 새 컨테이너 시작 후 health 실패    | workflow는 실패 처리하고 자동 롤백하지 않는다. 마이그레이션 실행 여부를 확인하고 incident 판단을 기다린다. | 원인 분석 및 수정 릴리스 준비.                  | 이전 이미지 재배포 또는 데이터 복구를 명시적으로 승인. |
+| technical smoke 일부 실패          | 영향을 Issue에 기록하고, 기능 영향 범위에 따라 배포 완료 보류 또는 incident 전환을 제안한다.               | 결함 분석, hotfix 또는 다음 릴리스 준비.        | 진행, 롤백, 또는 제한 운영을 결정.                     |
+| browser acceptance 실패            | 기술 배포 성공과 사용자 검수를 구분해 Issue를 열어 둔다. 명시적 요청 없이는 롤백하지 않는다.               | 관리자 결정 시 hotfix 세션과 새 릴리스 준비.    | 롤백, hotfix, 다음 릴리스 중 선택.                     |
 
-| Trigger | Production agent immediate action | Local agent follow-up | Maintainer role |
-|---|---|---|---|
-| Pre-deploy backup failure (§4 of deploy guide) | Halt, no image change, post §6.2 (d) with `Rollback status: not applicable (nothing deployed)` | Diagnose (disk, permissions, tar exit code semantics) | — |
-| Image pull failure (§5) | Halt, post (d) with `Rollback status: not applicable` | Verify tag exists and digest matches | If GHCR access issue, rotate token |
-| Alembic migration failure (§6) | Stop new container, keep failed data dir aside as `openwebui.failed-upgrade-<TS>`, restore from pre-deploy backup, bring up prior image, post (d) with `Rollback status: auto-rolled-back-with-data-restore` | Reproduce locally, cut next `-kwh.<N+1>` tag with fix, re-run full protocol | Re-approve Environment for the retry |
-| Health FAIL <3 min without migration success | Image rollback only (§8.1 of guide), post (d) with `Rollback status: auto-rolled-back-image-only` | Diagnose, cut next `-kwh.<N+1>` tag | Re-approve Environment for retry |
-| Health FAIL >3 min with migration success | Full rollback: image + data restore (§8.2), post (d) with `Rollback status: full-rolled-back` | Diagnose, cut next `-kwh.<N+1>` tag | Re-approve Environment for retry |
-| Technical smoke partial fail (some endpoints OK, some FAIL) | Do not auto-rollback, post (d) with `Rollback status: halted, awaiting maintainer decision` and specify what passed/failed | Wait for maintainer decision, prepare hotfix if requested | Post decision comment: `rollback` or `accept-and-hotfix-next-release` |
-| Browser acceptance fail (post-deploy, maintainer initiates) | On explicit rollback request from maintainer comment, execute §8.2 and post (d) | If rollback: prepare hotfix. If accept-with-follow-up: track items for next release. | Explicit comment: `please rollback` or `accept with follow-up: <list>` |
+이미지 롤백은 DB schema를 되돌리지 않는다. 마이그레이션 가능성이 있는 실패에서 이미지 교체나 데이터 이동을 자동화하지 않는다. 검증된 pre-deploy backup 복구는 명시적 승인과 해당 릴리스 가이드의 full rollback 절차가 있을 때만 수행한다.
 
-Rollback authority summary:
-- Auto-rollback conditions: migration failure, image pull success but container health fail within thresholds.
-- Requires maintainer decision: partial smoke failure, post-deploy browser acceptance failure.
-- Rollback re-deploy (bringing up prior tag) always re-uses the same immutable rollback target tag from §6.1; never a new tag.
+## 상태 인지
 
-Never create a corrective tag by rewriting an existing tag. Always cut `-kwh.<N+1>` after a verified fix.
+로컬 개발 에이전트의 1차 상태 정보원은 GitHub deployment Issue와 Actions run이다.
 
-## 8. State Awareness (how the local agent learns of deploy completion)
+1. **관리자 relay (필수 액션)**: 관리자는 프로덕션 에이전트가 §3(성공) 또는 §4(실패) 코멘트를 남긴 뒤, 로컬 개발 에이전트 세션 재개 시 다음 중 하나를 채팅에 붙여넣는다.
+   - (a) deployment Issue URL, 또는
+   - (b) 해당 Issue 코멘트 verbatim
+   이 relay가 프로토콜에서 유일하게 남는 관리자의 chat 액션이다. 나머지 명령·응답 relay는 모두 GitHub Issue와 Actions로 흡수된다.
+2. 로컬 개발 에이전트는 해당 Issue와 Actions 결과를 기준으로 hotfix, 다음 kwh 릴리스, 또는 후속 기능 작업을 결정한다.
+3. 세션 종료 뒤에는 ScheduleWakeup, 장시간 polling, 또는 로컬 세션 유지에 의존하지 않는다.
+4. 확실히 유지되는 15분 이하의 짧은 배포 세션에서만 단기 polling을 예외적으로 사용할 수 있다.
 
-The local agent is a session-scoped process; it cannot poll indefinitely.
+## 로컬 에이전트 handoff 메시지
 
-**Primary path**: the maintainer, upon seeing the production agent's §6.2 (c) or (d) Issue reply, resumes the local agent session and either quotes or links the Issue comment. The local agent then proceeds with follow-up (next release preparation, hotfix scoping, or acknowledgement).
+모든 증적을 채운 뒤 배포 Issue 본문에 아래 형식으로 남긴다. Issue form 미구현 상태(interim mode)에서는 free-form Issue의 상단에 이 블록을 배치한다.
 
-**Fallback path**: the local agent, before ending its session, may hand the maintainer a short "when you receive the following, please send it back to me" instruction. The maintainer relays the (c) or (d) comment verbatim.
+```text
+Release ready for production deployment.
 
-**Not supported**:
-- Long-duration polling (`ScheduleWakeup` beyond a session) — Claude Code sessions do not persist across restarts.
-- Webhook-driven session resume — no infrastructure exists in this project.
-- Automated Issue-comment listening from the local agent side.
+Tag: vX.Y.Z-kwh.N
+Main SHA: <full SHA>
+GHCR build: <Actions Run URL>
+Image digest: sha256:<digest>
+Rollback tag: <previous final tag>
+Deploy guide: docs/manual/kwh-deploy-guide-vX.Y.Z-kwh.N.md at commit <SHA>
+Validation: CI and local production-mirror verification passed; <known limitations or "none">.
+Browser checks required after deployment: OAuth, real model chat, upload/RAG, branding/splash, and relevant custom tools.
+```
 
-Deployments typically take 15–45 minutes in interim mode (human production agent + manual execution) or 8–15 minutes in target mode (workflow dispatch). Plan session boundaries accordingly.
+프로덕션 배포 에이전트는 Issue 증적을 검토하고, automation 모드에서는 **Deploy approved production release** workflow를 tag와 Issue 번호로 dispatch하며, interim mode에서는 deploy guide를 따라 수동 실행한다. 어느 모드에서든 GitHub는 self-hosted runner 또는 프로덕션 에이전트가 실행되기 전에 `production` Environment 승인을 기다린다.
 
-## 9. Rules
+## 완료 기준
 
-- Never request a production deploy for `main`, `latest`, an RC tag, or a tag outside the final-tag pattern.
-- Never treat tag creation as a completed production deploy. The production Actions workflow (or, in interim mode, the production agent's §6.2 (c) reply) is the official deployment record.
-- Never instruct the maintainer to copy SSH, Docker Compose, backup, or rollback commands between local and production hosts. All executable steps for the production agent live inside the per-release deploy guide (which the production agent reads from the repo at a specific commit), never inside chat or free-form maintainer relay.
-- Do not create a corrective tag by rewriting an existing tag. Cut a new immutable final tag after the fix is verified.
-- The maintainer is the only party that can approve the production `Environment`. The production agent never bypasses this gate.
-- The production agent must not act without a specific Issue reference. Every workflow dispatch or manual execution carries the Issue number.
-- If the production agent reports migration or health failure, pause release work until §7 concludes. Image rollback may not reverse database migrations.
-- Rollback re-deployments do not require a new tag; they redeploy the previous immutable tag from §6.1.
-- Between-release communication (bug reports, feature requests, hotfix scoping) is out of scope for this protocol. Use standard GitHub Issues with labels `bug`, `enhancement`, or `hotfix` and reference the relevant release tag in the body.
+릴리스는 배포 Issue에 다음이 모두 기록돼야 완료된다.
 
-## 10. Completion Criteria
+1. 프로덕션 Actions run 성공(또는 실패와 대응 상태) — §3 또는 §4 코멘트로 증적
+2. 배포된 image digest 및 backup 경로 — §3 코멘트 본문
+3. 기술 스모크 결과 — §3 코멘트 본문
+4. 사용자 브라우저 검수 결과 또는 합의된 후속 작업 — §"관리자 브라우저 acceptance 코멘트 템플릿"에 규정된 코멘트
 
-A release is complete only when all of the following are recorded on the deployment Issue and the Issue is closed:
+네 항목 중 하나라도 부재하면 tag 존재 여부와 무관하게 릴리스는 아직 open 상태다.
 
-1. The production Actions run (or manual execution in interim mode) succeeded — evidenced by production agent's §6.2 (c) Success comment.
-2. The deployed image digest and backup path were reported by the production agent — inside §6.2 (c) body.
-3. Technical smoke checks passed — inside §6.2 (c) body.
-4. The maintainer completed browser-only acceptance checks and posted §6.3 with `Release accepted` — or recorded accepted follow-up items with a link to their tracking Issues.
+## 규칙
 
-Absence of any one of these means the release is still open, regardless of the tag existing.
+- `main`, `latest`, RC tag, 형식 밖의 tag를 프로덕션 배포 대상으로 요청하지 않는다.
+- tag 생성만으로 프로덕션 배포 완료로 간주하지 않는다. production Actions workflow 결과(automation 모드) 또는 프로덕션 에이전트의 §3 성공 코멘트(interim mode)가 공식 배포 기록이다.
+- 기존 tag를 재작성하지 않는다. 수정은 검증 후 새 immutable final tag(`-kwh.<N+1>`)로 릴리스한다.
+- 관리자는 `production` Environment 승인의 유일한 주체다. 프로덕션 에이전트는 이 게이트를 우회하지 않는다.
+- 프로덕션 에이전트는 명시적 Issue 참조 없이 배포를 수행하지 않는다. 모든 workflow dispatch(또는 수동 실행)는 Issue 번호를 포함한다.
+- 마이그레이션 또는 health 실패가 보고되면 릴리스 작업을 중단하고 §"장애 처리와 권한"의 해당 행에 따라 진행한다. 이미지 롤백은 DB 마이그레이션을 되돌리지 못할 수 있다.
+- 롤백 재배포는 새 tag를 발행하지 않고 이전 immutable tag를 재사용한다.
+- 릴리스와 무관한 소통(버그 리포트, 기능 요청, hotfix 스코핑)은 이 프로토콜의 범위 밖이다. 표준 GitHub Issue를 `bug`, `enhancement`, `hotfix` 라벨로 사용하고 관련 릴리스 tag를 본문에 명시한다.
 
-## 11. Versioning and References
+## 버전 관리 (Versioning)
 
-**Protocol version**: v1.0 (2026-07-31)
+**Protocol version**: v1.1 (2026-07-31)
 
-**Compatible with**:
-- Per-release deploy guide template v1.0 (defined in §5).
-- Existing `.github/workflows/docker.yaml` (v*-kwh.* tag build).
-- `production` GitHub Environment (created 2026-07-30).
+**호환**:
+- Per-release deploy guide 스펙 v1.0 (§"Per-Release Deploy Guide Template"에서 정의)
+- `.github/workflows/docker.yaml` (v*-kwh.* tag build)
+- `production` GitHub Environment (2026-07-30 생성, required reviewer `kwh8121`)
 
-**Deferred to future protocol versions**:
-- v1.1 target: `.github/workflows/deploy-approved-production-release.yaml` implementation so Layer B execution is workflow-driven, removing the interim manual mode.
-- v1.1 target: `.github/ISSUE_TEMPLATE/production_deployment_request.yaml` so §6.1 evidence is form-validated.
-- v1.2 target (optional): automated local agent session resume on Issue comments.
-
-**Document hierarchy (top authoritative first)**:
-
-1. **This document** (`docs/manual/github-control-plane-local-agent-handoff.ko.md`) — coordination protocol between agents and the maintainer.
-2. `docs/manual/github-actions-ghcr-release-deployment.md` — CI/CD pipeline mechanics (tag semantics, image build workflow, GHCR conventions).
-3. `docs/manual/kwh-release-routine.md` — general release routine reference. §7 (manual SSH deploy) is **deprecated** by v1.0 of this protocol; retain other sections as informational context.
-4. Per-release deploy guides (`docs/manual/kwh-deploy-guide-v<X.Y.Z>-kwh.<N>.md`) — release-specific execution artifacts consumed by the production agent.
-
-**On conflict**: (1) wins over (2); (2) wins over (3) for pipeline mechanics; per-release guides (4) may override (3) for the specific release but never override (1) or (2).
+**v1.2 목표**:
+- `.github/workflows/deploy-approved-production-release.yaml` 신규 → Layer B workflow-driven 자동화
+- `.github/ISSUE_TEMPLATE/production_deployment_request.yaml` 신규 → §"배포 요청 계약" form 강제
+- self-hosted runner 프로덕션 등록 → `production` Environment 바인딩
+- v1.2 도달 시 §"사전 요건"의 ⚠️ 항목 3개 → ✅
 
 **Changelog**:
 
-- 2026-07-31 — v1.0: initial versioned release. Adds Prerequisites, Actors table, Coordination Surface diagram, Per-Release Deploy Guide Template (§5), Production Agent Reply Contract (§6.2), Maintainer Acceptance Contract (§6.3), Incident Handling matrix (§7), State Awareness (§8), Versioning (§11). Explicitly deprecates `kwh-release-routine.md §7`. Codifies interim mode until Layer B automation lands.
-- 2026-07-30 — v0 draft: initial actor/scope/rules by local development agent; deployment guide `v0.11.0-kwh.1` shipped and executed in interim mode.
+- **2026-07-31 (v1.1)**:
+  - §"프로덕션 에이전트 Issue 응답 계약" §1·§3의 `Guide:` 필드가 존재하지 않는 파일을 참조하던 버그 수정 → per-release deploy guide 경로로 정정 (`kwh-deploy-guide-v<X.Y.Z>-kwh.<N>.md at commit <SHA>` 포맷).
+  - §"사전 요건 (Prerequisites)" 신설. 인프라 인벤토리를 ✅/⚠️로 명시하고 interim mode를 명문화. workflow와 Issue form이 아직 없다는 사실이 문서화되지 않아 다음 릴리스에서 혼란 우려가 있던 gap 해소.
+  - §"Per-Release Deploy Guide Template" 신설. 릴리스별 실행 아티팩트 스펙을 11개 필수 섹션으로 규정. `kwh-deploy-guide-v0.11.0-kwh.1.md`를 표준 인스턴스로 지정.
+  - §"관리자 브라우저 acceptance 코멘트 템플릿" 신설. 프로덕션 에이전트 §3 코멘트 이후 관리자 응답 스키마 부재로 §"완료 기준" 4번이 파싱 불가능하던 문제 해결.
+  - §"문서 우선순위와 계층" 신설. 이 문서가 top authority임을 문서 내부에서 선언. `kwh-release-routine.md §7` 폐기 상태 명시.
+  - §"상태 인지" 관리자 relay 액션 명시화 — 유일하게 남는 관리자 chat 액션이 무엇인지 명확화.
+  - §"버전 관리" 신설. Protocol version + 호환 목록 + v1.2 목표 + 이 changelog.
+  - `feature/docs-handoff-v1.1 → integration/v0.11.0 → main` 흐름으로 통합.
+
+- **2026-07-31 (v1.0)**: 초기 versioned release. 역할 범위, 필수 릴리스 흐름, 배포 요청 계약, 프로덕션 에이전트 Issue 응답 계약(4단계), 장애 처리와 권한 매트릭스, 상태 인지, 완료 기준, 규칙. Commit `51eb61501`, PR #9.
+
+- **2026-07-30 (v0)**: 초안. 로컬 개발 에이전트 최초 작성. `v0.11.0-kwh.1` 배포에 사용된 handoff 방식(관리자가 프로덕션 배포 에이전트에게 deploy guide 전달)으로 실제 배포 성공.
