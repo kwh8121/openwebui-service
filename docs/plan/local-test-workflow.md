@@ -10,7 +10,9 @@
 - 기존 `docker-compose.staging.yaml`은 운영 호스트 병렬 기동용이므로 로컬용 별도 파일 필요 (프로덕션 미러 스코프)
 
 ### 검토 반영 (v2 개정)
+
 검토 결과 필수 3건 + 권장 4건을 반영. 주요 변경:
+
 - `.gitignore` 예외 규칙 명시
 - **로컬 검증은 스테이징 게이트를 대체하지 않고 추가 방어선으로 기능**함을 명시
 - 스크립트 성공 조건 강화 (`docker compose ps` + `logs`)
@@ -18,12 +20,15 @@
 - `ENABLE_OAUTH_PERSISTENT_CONFIG` 유지 결정 및 근거 명시
 
 ### 검토 반영 (v3 개정)
+
 2차 검토 결과 3건을 반영해 "빈 DB 검증 목표 달성"과 "immutable 태그 원칙 준수"를 강화:
+
 - **데이터 디렉터리 empty 강제**: 기본은 비어있지 않으면 abort, `--reuse-data` 플래그로만 재사용 허용 (신규 마이그레이션 검증이 false-positive로 통과하는 것을 방지)
 - **최종 태그 불변성 규칙 명시**: §3.9-b 도입부에 로컬 검증 실패 시 같은 태그 재빌드 금지 · 다음 kwh 번호로 스테이징부터 재진행 원칙 삽입
 - **태그 정규식 엄격화**: 기본은 최종 태그만 허용, `--allow-rc` 플래그로만 RC 태그 허용 (스테이징 게이트 대체 오용 방지)
 
 ### 검토 반영 (v4 개정 — 스테이징 대체 승격)
+
 현행 스테이징이 운영 호스트에 co-located된 논리 격리만 제공한다는 사실을 근거로 도구 성격을 재정의:
 
 - **포지셔닝 승격**: "추가 방어선(v3)" → **"릴리스 게이트로서의 스테이징 대체(v4)"**. `docker-compose.staging.yaml`이 제공하던 검증 스코프를 모두 흡수.
@@ -38,6 +43,7 @@
 ## 검증 범위 및 한계 (v4 재작성)
 
 ### 이 도구가 검증하는 것 (프로덕션 미러 스코프)
+
 - 이미지 pull 및 컨테이너 기동 성공 여부
 - **누적 데이터에 대한 마이그레이션 무오류** (기본 모드, 릴리스 간 데이터 보존)
 - 신규 설치 마이그레이션 (`--fresh` 모드, 빈 DB 검증)
@@ -48,12 +54,14 @@
 - 헬스체크 200 응답
 
 ### 이 도구가 검증하지 못하는 것
+
 - **프로덕션 사용자 실사용 부하** (동시 세션 규모, 실제 트래픽 패턴)
 - **프로덕션 하드웨어 특성** (GPU 유형, 디스크 IO 특성) — 로컬 WSL2 환경 특성으로 완전 재현 불가
 - **네트워크 경로별 이슈** (프로덕션의 리버스 프록시·방화벽·SSL 종단 특성)
 - 프로덕션 실제 데이터 (프라이버시/보안상 로컬 반입하지 않음, 로컬 축적 데이터로 대리 검증)
 
 ### 결론 (v4)
+
 로컬 검증은 **릴리스 게이트로서의 스테이징 대체**이다.
 `docker-compose.staging.yaml`을 사용한 운영 호스트 병렬 기동 검증은 폐기 경로. 프로덕션 배포 전 필수 관문은:
 
@@ -67,15 +75,15 @@ feature/* → integration/vX.Y.Z → RC 태그 → GH Actions 빌드 → 로컬 
 
 ## 신규/수정 파일 목록 (v4 재정리)
 
-| 파일 | 상태 | 작업 |
-|---|---|---|
-| `docker-compose.local-test.yaml` | v3 존재, v4 수정 | pipelines 서비스 추가, restart 정책 유지 |
-| `.env.local-test.template` | v3 존재, v4 재작성 | OAuth 우회 → 프로덕션 미러(OAuth on + Google OIDC 자리 표시자) |
-| `.env.local-test.fresh.template` | v4 신규 | v3 스타일(OAuth off, 패스워드 로그인)의 fresh 모드 참조용 템플릿 |
-| `.gitignore` | v3 존재, v4 확장 | `!.env.local-test.fresh.template` 예외 규칙 추가 |
-| `scripts/local-test.sh` | v3 존재, v4 대폭 수정 | defaults reverse(데이터 보존 기본), 백업/롤백/prune 하위 명령 추가, pipelines 성공 조건 확장 |
+| 파일                                 | 상태                      | 작업                                                                                                          |
+| ------------------------------------ | ------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `docker-compose.local-test.yaml`     | v3 존재, v4 수정          | pipelines 서비스 추가, restart 정책 유지                                                                      |
+| `.env.local-test.template`           | v3 존재, v4 재작성        | OAuth 우회 → 프로덕션 미러(OAuth on + Google OIDC 자리 표시자)                                                |
+| `.env.local-test.fresh.template`     | v4 신규                   | v3 스타일(OAuth off, 패스워드 로그인)의 fresh 모드 참조용 템플릿                                              |
+| `.gitignore`                         | v3 존재, v4 확장          | `!.env.local-test.fresh.template` 예외 규칙 추가                                                              |
+| `scripts/local-test.sh`              | v3 존재, v4 대폭 수정     | defaults reverse(데이터 보존 기본), 백업/롤백/prune 하위 명령 추가, pipelines 성공 조건 확장                  |
 | `docs/manual/kwh-release-routine.md` | v3 §3.9-b 존재, v4 재작성 | 도구를 스테이징 대체 게이트로 재기술, §3.6(스테이징 SSH) deprecation notice, §3.9-b를 §3.6-b로 위치 이동 검토 |
-| `docs/plan/local-test-workflow.md` | v3 존재, v4 개정 | 본 문서 |
+| `docs/plan/local-test-workflow.md`   | v3 존재, v4 개정          | 본 문서                                                                                                       |
 
 **참고**: `docker-compose.staging.yaml`은 v4에서 유지하되 deprecation notice 추가. 실제 삭제는 별도 세션에서 판단(운영 서버 관행 확인 후).
 
@@ -127,6 +135,7 @@ networks:
 ```
 
 **v4 설계 근거:**
+
 - **pipelines 서비스 편입** — 프로덕션 compose 미러링, RAG/pipelines 검증까지 스코프 포함
 - `restart: 'no'` — 테스트 후 자동 재기동 방지 유지 (프로덕션은 `unless-stopped`, 로컬은 게이트 목적이므로 무한 재기동 불필요)
 - 별도 네트워크 `openwebui_local_test_network` — 운영 `shared_bridge_network`와 격리
@@ -172,6 +181,7 @@ DEFAULT_USER_ROLE=admin
 ```
 
 **보안 주의:**
+
 - 실 `GOOGLE_CLIENT_SECRET`은 절대 커밋 금지. 템플릿은 자리 표시자만.
 - 로컬 전용 별도 OAuth 클라이언트를 만들어 프로덕션 시크릿 로컬 반입을 피하는 것이 더 안전 (권장).
 - 프로덕션 클라이언트를 재사용해도 redirect URI 화이트리스트 관리가 명확하면 리스크 통제 가능.
@@ -241,17 +251,19 @@ scripts/local-test.sh --prune-backups [--keep N]      # 오래된 백업 정리 
     - 통과: 접속 URL + 수동 체크리스트 안내 (OAuth 로그인 포함)
     - 실패: **롤백 안내 출력** —
       > "검증 실패. 아래 명령으로 백업 이전 상태로 롤백 가능:
-      >   `./scripts/local-test.sh --list-backups`
-      >   `./scripts/local-test.sh --restore <timestamp>`"
+      > `./scripts/local-test.sh --list-backups`
+      > `./scripts/local-test.sh --restore <timestamp>`"
     - 최종 태그 실패 시 immutable 태그 규칙 리마인더 (같은 태그 재빌드 금지, 다음 kwh 번호로 재진행)
 
 **`--restore <timestamp>` 동작:**
+
 1. `docker compose down`
 2. 현재 데이터 dir 이동: `mv <data-dir> <data-dir>.rolled-back-<now>` (안전용, 나중 수동 삭제 가능)
 3. `mkdir <data-dir>` + `tar -xzf <backups>/<ts>.tar.gz -C <data-dir>` (openwebui + pipelines 모두)
 4. 재실행 안내 출력
 
 **`--list-backups` 출력 형식:**
+
 ```
 백업 (${OPENWEBUI_LOCAL_TEST_DATA%/}.backups/):
   20260729-152230-v0.10.2-kwh.3-rc.1   45.2 MB
@@ -278,11 +290,13 @@ scripts/local-test.sh --prune-backups [--keep N]      # 오래된 백업 정리 
 ### 5. `docs/manual/kwh-release-routine.md` 수정 (v4 재작성)
 
 **§3.6 (기존 스테이징 SSH 배포) 처리:** deprecation notice 추가 —
+
 > "**Deprecated (v4):** 이 절차는 프로덕션과 동일 호스트 위 compose 격리에 의존하는 검증으로, 물리 격리가 없어 리스크를 프로덕션에 노출합니다. §3.6-b(로컬 프로덕션 미러 검증)로 대체됐습니다. 예외적 사유(로컬 환경 이슈 등)로 사용할 때만 실행하고, 그 사유를 릴리스 노트에 기록하세요."
 
 **§3.6-b (신규, v4)**: `로컬 프로덕션 미러 검증 (기본 릴리스 게이트)` — §3.5(RC 태그) 후 §3.7(PR) 이전에 삽입.
 
 내용:
+
 - 도입 문단: 이 단계는 **스테이징을 대체하는 릴리스 게이트**. `docker-compose.local-test.yaml` + `scripts/local-test.sh`가 프로덕션 compose를 미러링(pipelines 포함, OAuth on). 로컬 데이터는 릴리스 간 축적되어 실제 upgrade 마이그레이션이 매번 검증됨.
 - **immutable 태그 실패 처리 규칙 (v3 유지):** 검증 실패 시 같은 태그 재빌드 금지. 다음 kwh 번호로 새 RC 발행 후 재검증.
 - 검증 범위/한계 요약 (본 계획의 "검증 범위 및 한계" 섹션 참조)
@@ -325,6 +339,7 @@ scripts/local-test.sh --prune-backups [--keep N]      # 오래된 백업 정리 
 ## 로컬 수동 검증 체크리스트 (v4 프로덕션 미러 스코프)
 
 스크립트가 확인하는 항목 (자동, v4 4중 확인):
+
 - [x] openwebui 컨테이너 상태 `running`
 - [x] pipelines 컨테이너 상태 `running` (v4 신규)
 - [x] logs에 startup 오류 키워드 없음
@@ -333,12 +348,14 @@ scripts/local-test.sh --prune-backups [--keep N]      # 오래된 백업 정리 
 브라우저 수동 확인 항목:
 
 **인증 (v4 신규 — 프로덕션 미러)**
+
 - [ ] Google OAuth 버튼 클릭 → Google 리디렉트 성공
 - [ ] Google 계정 선택 후 로컬로 redirect back 성공 (`http://127.0.0.1:8082/oauth/google/callback`)
 - [ ] 세션이 새로고침 후에도 유지됨
 - [ ] fresh 모드(`--fresh`) 경우: 로그인 폼으로 계정 생성 및 로그인 성공
 
 **브랜드**
+
 - [ ] 좌상단 로고 = Koreatimes
 - [ ] 사이드바 하단 인스턴스명 = `Koreatimes` (접미사 없음)
 - [ ] 브라우저 탭 제목 = Koreatimes
@@ -347,15 +364,18 @@ scripts/local-test.sh --prune-backups [--keep N]      # 오래된 백업 정리 
 - [ ] **로딩 스플래시 다크 모드 = Koreatimes splash-dark** — 다크 테마 전환 후 새로고침 시 표시 (`static/static/splash-dark.png`)
 
 **UX**
+
 - [ ] 제안 카드 클릭 → 입력란 채워지고 자동 전송 안 됨 (kwh.2 변경사항)
 
 **기능 스모크 (v4 신규 — 프로덕션 미러)**
+
 - [ ] 모델 요청: 메시지 전송 → 응답 수신 (OPENAI_API_BASE_URL=http://pipelines:9099 경유)
 - [ ] pipelines 서비스가 워크스페이스 UI에 리스팅되고 연결 가능
 - [ ] RAG: 문서 업로드 → 질의 → 인용(citation) 표시
 - [ ] 이전 릴리스에서 축적한 채팅/설정/문서가 로그인 후 그대로 조회됨 (**upgrade 무결성**)
 
 **한계 (검증 대상 아님)**
+
 - 프로덕션 실제 트래픽 부하
 - 프로덕션 GPU/디스크/네트워크 특성
 - 프로덕션 리버스 프록시/SSL 종단 이슈
@@ -365,11 +385,13 @@ scripts/local-test.sh --prune-backups [--keep N]      # 오래된 백업 정리 
 ## 브랜치 전략 및 재빌드 정책 (v4 갱신)
 
 ### v4 도구 개선 도입
+
 - 브랜치: `feature/local-test-workflow-v4` → `integration/v0.10.2` `--no-ff` → PR → `main`
 - **이 커밋 자체는 이미지 재빌드 불필요** — compose 파일·템플릿·스크립트·문서만 변경, 이미지 콘텐츠 무변경
 - 새 git 태그 불필요
 
 ### 향후 릴리스에서의 사용 (v4 워크플로)
+
 1. **RC 태그 생성** (`v0.10.2-kwh.N-rc.M`) → GH Actions RC 이미지 빌드
 2. **로컬 검증 실행** (`./scripts/local-test.sh v0.10.2-kwh.N-rc.M --allow-rc`) — RC로 프로덕션 미러 검증. 자동 백업 후 이전 릴리스의 데이터 위에서 마이그레이션 확인.
 3. **통과 시 PR** `integration/v0.10.2` → `main`
@@ -378,6 +400,7 @@ scripts/local-test.sh --prune-backups [--keep N]      # 오래된 백업 정리 
 6. **프로덕션 SSH 배포**
 
 **데이터 축적 흐름:**
+
 - 최초 릴리스: `--fresh` 또는 첫 실행에서 빈 dir 자동 초기화 → 실제 사용 시나리오로 데이터 populate
 - 이후 릴리스: 매번 축적 데이터 위에서 검증 → 실제 마이그레이션 경로 반복 확인
 - 실패 시: `--restore <timestamp>`로 이전 상태 복구, 원인 수정, 재시도
