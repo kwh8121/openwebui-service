@@ -1,0 +1,132 @@
+name: Production deployment request
+description: Request approval + execution of a production deploy for an immutable kwh release tag. Consumed by the production deployment agent per the handoff protocol.
+title: "Production deployment request: v"
+labels:
+  - production-deploy
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Read `docs/manual/github-control-plane-local-agent-handoff.ko.md` (v1.2) — §"배포 요청 계약" — before submitting.
+
+        **Never include** OAuth credentials, package tokens, API keys, DB contents, cookies, or user data anywhere in this Issue.
+
+  - type: input
+    id: tag
+    attributes:
+      label: Release tag
+      description: Immutable final tag matching `v<X.Y.Z>-kwh.<N>`. No RC, no `main`, no `latest`.
+      placeholder: v0.11.0-kwh.1
+    validations:
+      required: true
+
+  - type: input
+    id: main_sha
+    attributes:
+      label: Main tip SHA
+      description: Full 40-character commit SHA that the tag points to.
+      placeholder: 0e2bd547cabc1234...
+    validations:
+      required: true
+
+  - type: input
+    id: run_url
+    attributes:
+      label: Successful GHCR build Run URL
+      description: URL of the `Build and publish GHCR release image` Actions run that produced the target image.
+      placeholder: https://github.com/kwh8121/openwebui-service/actions/runs/30522437399
+    validations:
+      required: true
+
+  - type: input
+    id: digest
+    attributes:
+      label: GHCR image digest
+      description: sha256:<64-hex>. Obtained via `docker inspect --format='{{index .RepoDigests 0}}' <image:tag>` or the GHCR web UI.
+      placeholder: sha256:...
+    validations:
+      required: true
+
+  - type: input
+    id: guide_ref
+    attributes:
+      label: Per-release deploy guide (path + commit SHA)
+      description: Full path within the repo plus the commit SHA that pins the file. The production agent fetches this exact revision.
+      placeholder: docs/manual/kwh-deploy-guide-v0.11.0-kwh.1.md at commit 51eb61501
+    validations:
+      required: true
+
+  - type: input
+    id: rollback_tag
+    attributes:
+      label: Current immutable rollback tag
+      description: The kwh release tag currently running in production. Used as the rollback target if the new release fails.
+      placeholder: v0.10.2-kwh.2
+    validations:
+      required: true
+
+  - type: textarea
+    id: local_verification
+    attributes:
+      label: Local verification results
+      description: RC + final tag local production-mirror verification (scripts/local-test.sh). Include tool version, pass/fail per phase.
+      placeholder: |
+        RC (v0.11.0-kwh.1-rc.1): PASS (scripts/local-test.sh v4.2)
+        Final (v0.11.0-kwh.1): PASS
+    validations:
+      required: true
+
+  - type: textarea
+    id: migration
+    attributes:
+      label: Migration expectation and compatibility risk
+      description: Count and IDs of Alembic migrations that will run on upgrade; known non-reversibility.
+      placeholder: |
+        7 new migrations run automatically:
+        - 55f1302ac17c_add_memory_id_user_id_covering_index
+        - 856c5b02fb54_add_chat_message_meta
+        - ...
+        Image rollback does NOT reverse these; full rollback requires backup restore.
+    validations:
+      required: true
+
+  - type: textarea
+    id: fork_carryovers
+    attributes:
+      label: Fork carryover validation
+      description: Brand assets, insertSuggestionPrompt default, WEBUI_NAME suffix removal, tool versions preserved through the upstream integration.
+      placeholder: |
+        - Koreatimes brand assets: preserved (splash light/dark, favicon, logo, manifest)
+        - Chat.svelte insertSuggestionPrompt ?? true: preserved (line 664 after v0.11.0 UI redesign)
+        - Settings/Interface.svelte defaults: preserved
+        - backend/open_webui/env.py: WEBUI_NAME suffix removal preserved
+        - local-test tool: v4.2 (commit 23f8a069f)
+    validations:
+      required: true
+
+  - type: textarea
+    id: browser_checks
+    attributes:
+      label: Known issues and browser-only checks required
+      description: List what the maintainer must eyeball after deploy. Follow the format in the handoff protocol §"관리자 브라우저 acceptance 코멘트 템플릿".
+      placeholder: |
+        - OAuth 로그인 및 세션 지속
+        - Brand (로고, 인스턴스명 접미사 없음, splash 라이트/다크, favicon)
+        - 제안 카드 UX (자동 전송 안 됨)
+        - 모델 대화 (응답 수신)
+        - Upload/RAG (문서 → 질의 → 인용)
+        - Pipelines (워크스페이스 리스팅 및 연결)
+        - 버전별 spot check (예: v0.11.0 UI 재설계)
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        After submitting, the production deployment agent (or the workflow `Deploy approved production release`) will:
+        1. Wait for the maintainer's `production` Environment approval.
+        2. Execute the deployment per the referenced deploy guide.
+        3. Post `## Deployment dispatched` → `## Deployment checkpoint` → `## Deployment success` (or `## Deployment failed`) comments per §"프로덕션 에이전트 Issue 응답 계약".
+
+        The maintainer then posts `## Browser acceptance` per §"관리자 브라우저 acceptance 코멘트 템플릿" to close the Issue.
