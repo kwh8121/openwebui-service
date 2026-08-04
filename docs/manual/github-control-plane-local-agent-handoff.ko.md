@@ -17,64 +17,35 @@
 
 이 프로토콜은 아래 인프라가 준비된 상태에서 완전 작동한다. 실제 릴리스 시 항목이 누락돼 있으면 중단하고 관리자 확인을 받는다.
 
-| 요건 | 위치 | v1.2 시점 상태 |
-|---|---|---|
-| `production` GitHub Environment (required reviewer: `kwh8121`) | GitHub repo → Environments | ✅ 존재 (2026-07-30 생성) |
-| Per-release deploy guide 파일 | `docs/manual/kwh-deploy-guide-v<X.Y.Z>-kwh.<N>.md` | ✅ 예시 인스턴스 `v0.11.0-kwh.1` 존재 |
-| GHCR image build workflow | `.github/workflows/docker.yaml` (trigger: `v*-kwh.*` tag) | ✅ 존재 |
-| `Deploy approved production release` workflow | `.github/workflows/deploy-approved-production-release.yaml` | ✅ v1.2에서 신설. `workflow_dispatch` 입력: `tag`, `issue_number`, `guide_commit`. Environment=`production` 바인딩. |
-| **Production deployment request** Issue form | `.github/ISSUE_TEMPLATE/production_deployment_request.yaml` | ✅ v1.2에서 신설. 라벨 `production-deploy`, 필수 필드가 §"배포 요청 계약" 스키마와 1:1 대응. |
-| self-hosted runner (production Environment 바인딩, labels `self-hosted,production`) | 프로덕션 호스트 (`/home/ubuntu/openwebui`에 접근 가능한 계정) | ⚠️ 관리자 수동 등록 필요. §"셀프호스팅 러너 등록"의 절차를 참조. 등록 전까지는 workflow가 dispatch돼도 러너 대기 상태로 무한 큐잉되므로, 그 사이에는 **interim mode**(사람 프로덕션 에이전트가 per-release deploy guide를 수동 실행)로 계속 운영. |
+| 요건                                                                                | 위치                                                          | v1.2 시점 상태                                                                                                                 |
+| ----------------------------------------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `production` GitHub Environment (required reviewer: `kwh8121`)                      | GitHub repo → Environments                                    | ✅ 존재 (2026-07-30 생성)                                                                                                      |
+| Per-release deploy guide 파일                                                       | `docs/manual/kwh-deploy-guide-v<X.Y.Z>-kwh.<N>.md`            | ✅ 예시 인스턴스 `v0.11.0-kwh.1` 존재                                                                                          |
+| GHCR image build workflow                                                           | `.github/workflows/docker.yaml` (trigger: `v*-kwh.*` tag)     | ✅ 존재                                                                                                                        |
+| `Deploy approved production release` workflow                                       | `.github/workflows/deploy-approved-production-release.yaml`   | ✅ v1.2에서 신설. `workflow_dispatch` 입력: `tag`, `issue_number`, `guide_commit`. Environment=`production` 바인딩.            |
+| **Production deployment request** Issue form                                        | `.github/ISSUE_TEMPLATE/production_deployment_request.yaml`   | ✅ v1.2에서 신설. 라벨 `production-deploy`, 필수 필드가 §"배포 요청 계약" 스키마와 1:1 대응.                                   |
+| self-hosted runner (production Environment 바인딩, labels `self-hosted,production`) | 프로덕션 호스트 (`/home/ubuntu/openwebui`에 접근 가능한 계정) | ✅ `openwebui-prod-runner` 등록 완료 (2026-07-31). labels: `self-hosted`, `Linux`, `X64`, `production`; systemd 서비스 active. |
 
-**Interim mode 정의 (남아있는 ⚠️ 항목에만 해당)**: self-hosted runner 등록 전까지는 사람 프로덕션 에이전트가 §"필수 릴리스 흐름"과 per-release deploy guide를 읽고 수동으로 실행하며, §"프로덕션 에이전트 Issue 응답 계약"에 규정된 스키마로 Issue에 응답한다. 러너 등록 완료 후에는 workflow가 동일 동작을 자동 실행하고 자동으로 코멘트를 게시하므로 사람 에이전트 개입은 실패 조사·수정 시에만 필요해진다.
+**Interim mode 정의 (예외 fallback)**: runner가 offline이거나 GitHub Actions 인프라 장애로 workflow를 실행할 수 없을 때만 사람 프로덕션 에이전트가 §"필수 릴리스 흐름"과 per-release deploy guide를 따라 수동 실행한다. 정상 상태에서는 workflow가 동일 동작을 실행하고 Issue에 자동 코멘트를 게시하며, 사람 에이전트 개입은 승인·실패 조사·수정 시에만 필요하다.
 
-## 셀프호스팅 러너 등록 (v1.2 마무리 액션)
+## 셀프호스팅 러너 상태 및 유지관리
 
-관리자 1회 수행. 이 절차가 완료되면 §"사전 요건"의 마지막 ⚠️가 ✅로 전환되고, 로컬 에이전트가 Issue를 제출한 뒤 관리자가 `production` Environment를 승인하면 배포가 자동 진행된다.
+러너 등록은 완료됐다. 현재 runner는 GitHub repository scope에서 `openwebui-prod-runner`라는 이름으로 등록돼 있으며 `production` custom label을 사용한다. 로컬 에이전트가 Issue를 제출하고 관리자가 `production` Environment를 승인하면 workflow가 이 runner에서 실행된다.
 
-1. **GitHub 등록 토큰 획득**
-   - 저장소 `Settings → Actions → Runners → New self-hosted runner (Linux, x64)`
-   - 표시된 등록 토큰을 복사 (1시간 유효)
+현재 systemd 서비스:
 
-2. **프로덕션 호스트에서 러너 설치**
-
-```bash
-ssh <prod-host>
-mkdir -p /home/ubuntu/actions-runner && cd /home/ubuntu/actions-runner
-
-# 최신 러너 tarball 다운로드 (GitHub UI가 안내하는 정확한 버전/URL 사용)
-curl -o actions-runner-linux-x64.tar.gz -L <다운로드 URL>
-tar xzf actions-runner-linux-x64.tar.gz
-
-# 등록 — labels에 반드시 self-hosted + production 포함
-./config.sh \
-  --url https://github.com/kwh8121/openwebui-service \
-  --token <등록 토큰> \
-  --name openwebui-prod-runner \
-  --labels self-hosted,production \
-  --unattended \
-  --replace
-
-# systemd 서비스로 등록
-sudo ./svc.sh install ubuntu
-sudo ./svc.sh start
-sudo ./svc.sh status
+```text
+actions.runner.kwh8121-openwebui-service.openwebui-prod-runner.service
 ```
 
-3. **러너의 docker 접근 확인**
-   - `docker ps`가 `sudo` 없이 실행되어야 함 (`sudo usermod -aG docker ubuntu` 후 재로그인).
-   - `docker login ghcr.io -u kwh8121`이 러너 유저(`ubuntu`)로 완료돼 있어야 GHCR image pull이 가능.
-   - `/home/ubuntu/openwebui` 하위 파일에 대한 rw 권한이 있어야 함.
+정상 상태 확인 항목:
 
-4. **Environment 바인딩 확인**
-   - 저장소 `Settings → Environments → production → Deployment branch and tag rules`에 특별 제약이 없다면, 러너 label만 일치하면 이 workflow가 자동으로 이 러너에서 실행된다.
-   - 필요 시 `Deployment protection rules`에 required reviewer가 `kwh8121`로 남아 있는지 확인.
+- GitHub `Settings → Actions → Runners`에서 `openwebui-prod-runner`가 `Online`
+- labels에 `self-hosted`, `Linux`, `X64`, `production` 존재
+- systemd 서비스가 `enabled`, `active`
+- `ubuntu` 계정이 Docker, GHCR manifest, `/home/ubuntu/openwebui`, `/app/pipelines`에 접근 가능
 
-5. **시연 배포**
-   - `Actions → Deploy approved production release → Run workflow`에서 최근 릴리스 tag/Issue 번호/deploy guide 커밋 SHA를 입력해 dry-run 감각으로 실행 (예: 다음 hotfix 릴리스 시).
-   - `Waiting for approval from kwh8121` 상태가 뜨면 승인 → 러너에서 실행 → Issue에 자동 코멘트 확인.
-
-등록 완료 후 이 문서 §"사전 요건" 러너 행의 ⚠️를 ✅로 갱신하고 changelog에 등록 일자 추가.
+runner 교체 또는 재등록은 GitHub에서 이전 runner를 제거한 뒤 현재 repository의 최신 runner 등록 절차와 `production` custom label을 사용한다. 기존 릴리스 tag를 이용한 즉시 재배포는 dry-run이 아니며 Open WebUI 중지·백업·재생성을 수행하므로, 다음 승인된 릴리스에서 end-to-end workflow를 검증한다.
 
 ## 역할 범위
 
@@ -199,6 +170,7 @@ Next action required: <local agent | maintainer | ready to retry>
 Result: <PASS | PASS with follow-up | FAIL>
 
 Checked:
+
 - OAuth 로그인 및 세션 지속: <observation>
 - Brand (로고, 인스턴스명 접미사 없음, splash 라이트/다크, favicon): <observation>
 - 제안 카드 UX (자동 전송 안 됨): <observation>
@@ -209,7 +181,7 @@ Checked:
 
 Follow-up items (있으면): <목록, 각 항목별 tracking Issue 링크 권장>
 
-Release accepted.  <!-- 또는 -->  Release rejected: <이유>
+Release accepted. <!-- 또는 --> Release rejected: <이유>
 ```
 
 - `PASS` 또는 `PASS with follow-up` 코멘트 → Issue 닫음. Follow-up은 별도 tracking Issue로 이관.
@@ -235,7 +207,7 @@ Release accepted.  <!-- 또는 -->  Release rejected: <이유>
 1. **관리자 relay (필수 액션)**: 관리자는 프로덕션 에이전트가 §3(성공) 또는 §4(실패) 코멘트를 남긴 뒤, 로컬 개발 에이전트 세션 재개 시 다음 중 하나를 채팅에 붙여넣는다.
    - (a) deployment Issue URL, 또는
    - (b) 해당 Issue 코멘트 verbatim
-   이 relay가 프로토콜에서 유일하게 남는 관리자의 chat 액션이다. 나머지 명령·응답 relay는 모두 GitHub Issue와 Actions로 흡수된다.
+     이 relay가 프로토콜에서 유일하게 남는 관리자의 chat 액션이다. 나머지 명령·응답 relay는 모두 GitHub Issue와 Actions로 흡수된다.
 2. 로컬 개발 에이전트는 해당 Issue와 Actions 결과를 기준으로 hotfix, 다음 kwh 릴리스, 또는 후속 기능 작업을 결정한다.
 3. 세션 종료 뒤에는 ScheduleWakeup, 장시간 polling, 또는 로컬 세션 유지에 의존하지 않는다.
 4. 확실히 유지되는 15분 이하의 짧은 배포 세션에서만 단기 polling을 예외적으로 사용할 수 있다.
@@ -286,6 +258,7 @@ Browser checks required after deployment: OAuth, real model chat, upload/RAG, br
 **Protocol version**: v1.2 (2026-07-31)
 
 **호환**:
+
 - Per-release deploy guide 스펙 v1.0 (§"Per-Release Deploy Guide Template"에서 정의)
 - `.github/workflows/docker.yaml` (v*-kwh.* tag build)
 - `.github/workflows/deploy-approved-production-release.yaml` (v1.2 신설, `workflow_dispatch`)
@@ -293,6 +266,7 @@ Browser checks required after deployment: OAuth, real model chat, upload/RAG, br
 - `production` GitHub Environment (2026-07-30 생성, required reviewer `kwh8121`)
 
 **v1.3 목표 (선택)**:
+
 - 마이그레이션 실패 시 자동 데이터 복원 옵션 (opt-in workflow input) 검토 — 현재는 사람 결정 대기
 - Actions Run 완료 시 로컬 개발 에이전트에게 자동 알림 (webhook or scheduled poller) — 세션 재개 자동화
 - deploy guide 렌더링 검증 (§"Per-Release Deploy Guide Template" 11 섹션 준수 자동 체크)

@@ -12,20 +12,20 @@ diverges from reality, halt and escalate before touching §4.
 
 ## 1. Release identifiers
 
-| Item | Value |
-|---|---|
-| Version | **v0.11.0-kwh.1** |
-| Git tag object | annotated tag on `main` tip after PR #8 merge |
-| Main tip SHA | `0e2bd547c` |
-| GHCR image tag (deploy this) | `ghcr.io/kwh8121/openwebui-service:v0.11.0-kwh.1` |
-| GHCR short-SHA tag (parity check) | `ghcr.io/kwh8121/openwebui-service:git-0e2bd54` |
-| Image digest (`sha256:...`) | **Agent fetches — see §3.4** |
-| GH Actions build Run | `30522437399` |
-| Run URL | https://github.com/kwh8121/openwebui-service/actions/runs/30522437399 |
-| Build duration | 6m47s |
-| Base upstream | Open WebUI `v0.11.0` (2026-07-27) |
-| Fork carryovers | Koreatimes brand assets, `WEBUI_NAME` suffix removal, `insertSuggestionPrompt=true` default, local-test tooling |
-| Rollback target | `ghcr.io/kwh8121/openwebui-service:v0.10.2-kwh.2` (currently running) |
+| Item                              | Value                                                                                                           |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Version                           | **v0.11.0-kwh.1**                                                                                               |
+| Git tag object                    | annotated tag on `main` tip after PR #8 merge                                                                   |
+| Main tip SHA                      | `0e2bd547c`                                                                                                     |
+| GHCR image tag (deploy this)      | `ghcr.io/kwh8121/openwebui-service:v0.11.0-kwh.1`                                                               |
+| GHCR short-SHA tag (parity check) | `ghcr.io/kwh8121/openwebui-service:git-0e2bd54`                                                                 |
+| Image digest (`sha256:...`)       | **Agent fetches — see §3.4**                                                                                    |
+| GH Actions build Run              | `30522437399`                                                                                                   |
+| Run URL                           | https://github.com/kwh8121/openwebui-service/actions/runs/30522437399                                           |
+| Build duration                    | 6m47s                                                                                                           |
+| Base upstream                     | Open WebUI `v0.11.0` (2026-07-27)                                                                               |
+| Fork carryovers                   | Koreatimes brand assets, `WEBUI_NAME` suffix removal, `insertSuggestionPrompt=true` default, local-test tooling |
+| Rollback target                   | `ghcr.io/kwh8121/openwebui-service:v0.10.2-kwh.2` (currently running)                                           |
 
 > **Do NOT deploy `latest` or `main`.** Only the immutable version tag or
 > the git-SHA tag. The compose file will refuse to start without
@@ -49,6 +49,7 @@ diverges from reality, halt and escalate before touching §4.
   7. `f0bd01a18a3d_add_unique_normalized_user_email_index`
 
 **Fork carryovers preserved** (do not need re-application):
+
 - `backend/open_webui/env.py`: no forced `' (Open WebUI)'` suffix on `WEBUI_NAME`.
 - Chat.svelte / Settings/Interface.svelte: `insertSuggestionPrompt ?? true` default (suggestion cards populate input; do not auto-submit).
 - Static assets (`static/static/*` and `backend/open_webui/static/*`): Koreatimes favicon / logo / splash (light + dark) / manifest.
@@ -126,6 +127,7 @@ grep -E '^(WEBUI_NAME|ENABLE_OAUTH_SIGNUP|ENABLE_LOGIN_FORM|ENABLE_OAUTH_PERSIST
 ```
 
 Expected findings (based on 2026-07-30 confirmed state):
+
 - `WEBUI_NAME=Koreatimes`
 - `ENABLE_OAUTH_SIGNUP=true`
 - `ENABLE_OAUTH_PERSISTENT_CONFIG=true`
@@ -313,6 +315,7 @@ actual login screen**:
 ## 8. Rollback procedure
 
 **Trigger any of the following:**
+
 - `/health` returns non-200 for >3 minutes after §5.
 - Alembic emits an `ERROR` or `Traceback` in §6.
 - §7.1 shows regression that blocks all users (not just the LOGIN_FORM caveat).
@@ -362,6 +365,7 @@ curl -sf http://localhost/health && echo OK
 ```
 
 After successful rollback:
+
 - Do **not** cut a new tag pretending to fix the issue; the immutable rule applies.
 - Report the failure to the release owner. The fix path is: reproduce locally, patch, cut `v0.11.0-kwh.2` (or later), re-verify locally, then re-attempt production deploy.
 
@@ -375,16 +379,16 @@ Keep `openwebui.failed-upgrade-*` for at least 7 days for post-mortem. Delete af
 
 At end of a successful deploy, record these values in the release ticket / operations log:
 
-| Field | Value to capture |
-|---|---|
-| Deploy start UTC | (from your shell history) |
-| Deploy end UTC | (health OK timestamp) |
-| Old image digest | (from §3.3 + `docker inspect` of pre-upgrade container) |
-| New image digest | (from §3.4 `$NEW_DIGEST`) |
-| Backup path + size | `~/prod-backup-preupgrade-<TS>-v0.10.2-kwh.2.tar.gz` + `du -h` |
-| Alembic upgrade lines | Copy the 7 "Running upgrade" lines from §6 logs |
-| Login screen result | OAuth-only or OAuth+password (§7.1) |
-| Full smoke result | pass / fail per each §7 subsection |
+| Field                 | Value to capture                                               |
+| --------------------- | -------------------------------------------------------------- |
+| Deploy start UTC      | (from your shell history)                                      |
+| Deploy end UTC        | (health OK timestamp)                                          |
+| Old image digest      | (from §3.3 + `docker inspect` of pre-upgrade container)        |
+| New image digest      | (from §3.4 `$NEW_DIGEST`)                                      |
+| Backup path + size    | `~/prod-backup-preupgrade-<TS>-v0.10.2-kwh.2.tar.gz` + `du -h` |
+| Alembic upgrade lines | Copy the 7 "Running upgrade" lines from §6 logs                |
+| Login screen result   | OAuth-only or OAuth+password (§7.1)                            |
+| Full smoke result     | pass / fail per each §7 subsection                             |
 
 ---
 
@@ -392,12 +396,12 @@ At end of a successful deploy, record these values in the release ticket / opera
 
 `docker-compose.deploy.yaml` interpolation variables (must be exported in every compose invocation):
 
-| Variable | Value for this deploy | Purpose |
-|---|---|---|
-| `OPENWEBUI_IMAGE_TAG` | `v0.11.0-kwh.1` (deploy) / `v0.10.2-kwh.2` (rollback) | Image tag, `:?` guard fails on missing |
-| `OPENWEBUI_LOCAL_DATA` | `/home/ubuntu/openwebui/openwebui` | openwebui data bind mount |
-| `OPENWEBUI_DEPLOY_ENV_FILE` | `/home/ubuntu/openwebui/.env.openwebui.oauth` | env_file path |
-| `PIPELINES_LOCAL_DATA` | `/app/pipelines` | pipelines data bind mount |
+| Variable                    | Value for this deploy                                 | Purpose                                |
+| --------------------------- | ----------------------------------------------------- | -------------------------------------- |
+| `OPENWEBUI_IMAGE_TAG`       | `v0.11.0-kwh.1` (deploy) / `v0.10.2-kwh.2` (rollback) | Image tag, `:?` guard fails on missing |
+| `OPENWEBUI_LOCAL_DATA`      | `/home/ubuntu/openwebui/openwebui`                    | openwebui data bind mount              |
+| `OPENWEBUI_DEPLOY_ENV_FILE` | `/home/ubuntu/openwebui/.env.openwebui.oauth`         | env_file path                          |
+| `PIPELINES_LOCAL_DATA`      | `/app/pipelines`                                      | pipelines data bind mount              |
 
 Compose invocation always uses `-p openwebui` (project name flag).
 

@@ -6,33 +6,33 @@
 
 ## 1. Repository & Remote Setup
 
-| Item | Value |
-|---|---|
-| Local working directory | `~/projects/openwebui-service` |
-| `origin` (push target) | `https://github.com/kwh8121/openwebui-service.git` |
-| `upstream` (fetch only) | `https://github.com/open-webui/open-webui.git` (push URL: `DISABLED`) |
-| Container registry | `ghcr.io/kwh8121/openwebui-service` |
-| Authoritative release doc | `docs/manual/github-actions-ghcr-release-deployment.md` |
-| Session/work logs | `docs/jobs/YYYY-MM-DD-openwebui-jobs.md` (date-based, append same-day) |
+| Item                      | Value                                                                  |
+| ------------------------- | ---------------------------------------------------------------------- |
+| Local working directory   | `~/projects/openwebui-service`                                         |
+| `origin` (push target)    | `https://github.com/kwh8121/openwebui-service.git`                     |
+| `upstream` (fetch only)   | `https://github.com/open-webui/open-webui.git` (push URL: `DISABLED`)  |
+| Container registry        | `ghcr.io/kwh8121/openwebui-service`                                    |
+| Authoritative release doc | `docs/manual/github-actions-ghcr-release-deployment.md`                |
+| Session/work logs         | `docs/jobs/YYYY-MM-DD-openwebui-jobs.md` (date-based, append same-day) |
 
 ## 2. Branch And Tag Conventions
 
 ### Branches
 
-| Pattern | Purpose | Rules |
-|---|---|---|
-| `main` | Deploy source of truth | **Never commit directly.** PR from `integration/*` only. |
-| `integration/vX.Y.Z` | Accumulates custom changes for a specific upstream version | Feature merges via `--no-ff`. Long-lived per upstream version. |
-| `feature/<slug>` | One logical customization unit | Branch from current `integration/*` (or `main` for docs-only). Merge to `integration/*` with `--no-ff`. |
+| Pattern              | Purpose                                                    | Rules                                                                                                   |
+| -------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `main`               | Deploy source of truth                                     | **Never commit directly.** PR from `integration/*` only.                                                |
+| `integration/vX.Y.Z` | Accumulates custom changes for a specific upstream version | Feature merges via `--no-ff`. Long-lived per upstream version.                                          |
+| `feature/<slug>`     | One logical customization unit                             | Branch from current `integration/*` (or `main` for docs-only). Merge to `integration/*` with `--no-ff`. |
 
 Feature branches remain on `origin` after merge for traceability. Delete only after next release cycle proves stable.
 
 ### Tags
 
-| Pattern | Example | Meaning |
-|---|---|---|
-| `vX.Y.Z-kwh.N` | `v0.10.2-kwh.2` | Final release. Cut from the merge commit on `main`. Triggers production image build. |
-| `vX.Y.Z-kwh.N-rc.M` | `v0.10.2-kwh.2-rc.1` | Release candidate. Cut from `integration/vX.Y.Z` tip. Triggers staging image build. |
+| Pattern             | Example              | Meaning                                                                              |
+| ------------------- | -------------------- | ------------------------------------------------------------------------------------ |
+| `vX.Y.Z-kwh.N`      | `v0.10.2-kwh.2`      | Final release. Cut from the merge commit on `main`. Triggers production image build. |
+| `vX.Y.Z-kwh.N-rc.M` | `v0.10.2-kwh.2-rc.1` | Release candidate. Cut from `integration/vX.Y.Z` tip. Triggers staging image build.  |
 
 The workflow (`.github/workflows/docker.yaml`) fires on tag pattern `v*-kwh.*`.
 
@@ -44,9 +44,11 @@ The workflow (`.github/workflows/docker.yaml`) fires on tag pattern `v*-kwh.*`.
 - `type=sha,prefix=git-` — **7-character short SHA** (e.g., `git-42681f0`), not the full 40-char SHA.
 
 **Correct** deployment variable:
+
 ```bash
 export OPENWEBUI_IMAGE_TAG=v0.10.2-kwh.2       # 'v' prefix required
 ```
+
 Bare `0.10.2-kwh.2` or a full 40-char SHA **will not exist on GHCR** and `docker pull` will fail.
 
 ## 3. End-to-End Routine (per custom change)
@@ -83,18 +85,21 @@ git push origin integration/vX.Y.Z
 ### 3.5 Cut RC tag → staging build
 
 Find the next RC number:
+
 ```bash
 git fetch --tags
 git tag -l 'vX.Y.Z-kwh.*' | sort -V
 ```
 
 Cut and push:
+
 ```bash
 git tag -a vX.Y.Z-kwh.N-rc.M <integration-tip-sha> -m "vX.Y.Z-kwh.N-rc.M ..."
 git push origin vX.Y.Z-kwh.N-rc.M
 ```
 
 Monitor:
+
 ```bash
 gh run list --repo kwh8121/openwebui-service --workflow=docker.yaml --limit 3
 gh run watch <run-id> --repo kwh8121/openwebui-service --interval 45 --exit-status
@@ -212,11 +217,11 @@ See §7 (full command block).
 
 ## 4. Docker Compose Files
 
-| File | Purpose | build: section | Data mount |
-|---|---|---|---|
-| `docker-compose-build.yaml` | Dev builds only | ✅ present | dev data |
-| `docker-compose.staging.yaml` | Isolated staging validation | ❌ absent | Separate staging data dir, localhost-only port |
-| `docker-compose.deploy.yaml` | Production | ❌ absent | Preserves `/app/backend/data` and `/app/pipelines` |
+| File                          | Purpose                     | build: section | Data mount                                         |
+| ----------------------------- | --------------------------- | -------------- | -------------------------------------------------- |
+| `docker-compose-build.yaml`   | Dev builds only             | ✅ present     | dev data                                           |
+| `docker-compose.staging.yaml` | Isolated staging validation | ❌ absent      | Separate staging data dir, localhost-only port     |
+| `docker-compose.deploy.yaml`  | Production                  | ❌ absent      | Preserves `/app/backend/data` and `/app/pipelines` |
 
 Staging compose **must never** mount the production data directory.
 
@@ -224,20 +229,22 @@ Staging compose **must never** mount the production data directory.
 
 All read by `docker-compose.deploy.yaml` (and staging variant). Set explicitly to avoid silent default fallback.
 
-| Variable | Default in compose | Purpose |
-|---|---|---|
-| `OPENWEBUI_IMAGE_TAG` | required (compose fails without) | GHCR image tag, e.g., `v0.10.2-kwh.2` (with `v`) |
-| `OPENWEBUI_LOCAL_DATA` | `/app/backend/data` | Bind-mount source for user data / DB |
-| `OPENWEBUI_DEPLOY_ENV_FILE` | `./.env.openwebui.oauth` | Path to the env_file with OAuth + brand config |
-| `PIPELINES_LOCAL_DATA` | `/app/pipelines` | Bind-mount for pipelines container |
+| Variable                    | Default in compose               | Purpose                                          |
+| --------------------------- | -------------------------------- | ------------------------------------------------ |
+| `OPENWEBUI_IMAGE_TAG`       | required (compose fails without) | GHCR image tag, e.g., `v0.10.2-kwh.2` (with `v`) |
+| `OPENWEBUI_LOCAL_DATA`      | `/app/backend/data`              | Bind-mount source for user data / DB             |
+| `OPENWEBUI_DEPLOY_ENV_FILE` | `./.env.openwebui.oauth`         | Path to the env_file with OAuth + brand config   |
+| `PIPELINES_LOCAL_DATA`      | `/app/pipelines`                 | Bind-mount for pipelines container               |
 
 Env file contents required for Koreatimes brand:
+
 ```env
 WEBUI_NAME=Koreatimes
 # ... existing OAuth vars ...
 ```
 
 Add via:
+
 ```bash
 grep -q '^WEBUI_NAME=' <env-file> \
   && sed -i 's|^WEBUI_NAME=.*|WEBUI_NAME=Koreatimes|' <env-file> \
@@ -251,21 +258,25 @@ grep -q '^WEBUI_NAME=' <env-file> \
 After each staging or production deploy:
 
 **Container health**
+
 - [ ] `docker compose ... ps openwebui` shows `running (healthy)` or equivalent
 - [ ] `docker compose ... logs --tail 100 openwebui` shows no startup errors
 - [ ] `curl -sf http://<host>/health` returns 200
 
 **Authentication**
+
 - [ ] Login page loads
 - [ ] OAuth provider flow completes end-to-end
 - [ ] User session persists on refresh
 
 **Functional smoke**
+
 - [ ] Model request: send a message, get a response
 - [ ] File upload / RAG: upload a document, ask about it, verify citations
 - [ ] Pipelines: pipeline service listed and connectable in workspace UI
 
 **Brand (post Koreatimes swap)**
+
 - [ ] Top-left sidebar logo = Koreatimes
 - [ ] Sidebar footer instance name = `Koreatimes` (no ` (Open WebUI)` suffix)
 - [ ] Login page + onboarding logo = Koreatimes
@@ -275,6 +286,7 @@ After each staging or production deploy:
 - [ ] Dark mode logo renders correctly
 
 **Suggestion prompt behavior (post kwh.2)**
+
 - [ ] Clicking a suggestion card populates the input instead of auto-sending (for users with no explicit setting)
 
 ## 7. Production Deployment (SSH block, copy-paste) — **DEPRECATED (2026-07-31)**
@@ -286,7 +298,6 @@ After each staging or production deploy:
 > The commands below are retained as a fallback reference for exceptional cases when the handoff infrastructure is unavailable (e.g., GitHub outage, self-hosted runner offline). If used, record the reason in the release notes and the associated Issue.
 
 **Legacy manual SSH steps (fallback only):**
-
 
 ```bash
 ssh <prod-server>
@@ -383,22 +394,24 @@ Follow §9 (docs-only shortcut). Correct the doc, PR to `main`. No new release t
 - Persistent memory (mem0/openviking): pointer to this file lives under `kwh8121-openwebui-service` project scope
 
 Between sessions, start by:
+
 ```bash
 git status --short --branch
 git log --oneline -5
 git tag -l 'v*-kwh.*' | sort -V | tail -5
 ```
+
 to reorient without reading full history.
 
 ## 12. Divergence From Upstream (running inventory)
 
 Kept here so operators know what will conflict on future upstream merges.
 
-| File | Line(s) | Change | Introduced |
-|---|---|---|---|
-| `src/lib/components/chat/Chat.svelte` | 323 | `?? false` → `?? true` (default for `insertSuggestionPrompt`) | `c68c745d2` (v0.10.2-kwh.2) |
-| `src/lib/components/chat/Settings/Interface.svelte` | 57, 227 | `= false` / `?? false` → `= true` / `?? true` (matches Chat.svelte default) | `c68c745d2` (v0.10.2-kwh.2) |
-| `backend/open_webui/env.py` | 842-844 | Removed `if WEBUI_NAME != 'Open WebUI': WEBUI_NAME += ' (Open WebUI)'` | `4cbd9a061` (v0.10.2-kwh.2) |
-| `static/static/*` + `backend/open_webui/static/*` | — | Koreatimes brand assets (12 files × 2 dirs) | `171e0f742` (v0.10.2-kwh.2) |
-| `.gitignore` | 22 | Removed `CLAUDE.md` entry so the fork's root `CLAUDE.md` (which `@`-imports `AGENTS.md`) can be committed for Claude Code session startup | Post-v0.10.2-kwh.2 (this PR) |
-| `CLAUDE.md` (new file) | — | Repo-root Claude Code entry point; single line `@AGENTS.md` | Post-v0.10.2-kwh.2 (this PR) |
+| File                                                | Line(s) | Change                                                                                                                                    | Introduced                   |
+| --------------------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| `src/lib/components/chat/Chat.svelte`               | 323     | `?? false` → `?? true` (default for `insertSuggestionPrompt`)                                                                             | `c68c745d2` (v0.10.2-kwh.2)  |
+| `src/lib/components/chat/Settings/Interface.svelte` | 57, 227 | `= false` / `?? false` → `= true` / `?? true` (matches Chat.svelte default)                                                               | `c68c745d2` (v0.10.2-kwh.2)  |
+| `backend/open_webui/env.py`                         | 842-844 | Removed `if WEBUI_NAME != 'Open WebUI': WEBUI_NAME += ' (Open WebUI)'`                                                                    | `4cbd9a061` (v0.10.2-kwh.2)  |
+| `static/static/*` + `backend/open_webui/static/*`   | —       | Koreatimes brand assets (12 files × 2 dirs)                                                                                               | `171e0f742` (v0.10.2-kwh.2)  |
+| `.gitignore`                                        | 22      | Removed `CLAUDE.md` entry so the fork's root `CLAUDE.md` (which `@`-imports `AGENTS.md`) can be committed for Claude Code session startup | Post-v0.10.2-kwh.2 (this PR) |
+| `CLAUDE.md` (new file)                              | —       | Repo-root Claude Code entry point; single line `@AGENTS.md`                                                                               | Post-v0.10.2-kwh.2 (this PR) |
