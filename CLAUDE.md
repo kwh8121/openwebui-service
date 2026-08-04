@@ -6,7 +6,7 @@ Content-heavy edits belong in `AGENTS.md` or the linked docs. The routine summar
 
 ## Production Release Routine (at-a-glance)
 
-For any code/asset change destined for production. Full details in `docs/manual/kwh-release-routine.md`; authoritative rules in `docs/manual/github-actions-ghcr-release-deployment.md`.
+For any code/asset change destined for production. Full details in `docs/manual/kwh-release-routine.md`; coordination protocol (top authority) in `docs/manual/github-control-plane-local-agent-handoff.ko.md` (Protocol v1.2); CI/CD mechanics in `docs/manual/github-actions-ghcr-release-deployment.md`.
 
 1. **Recovery guard**: if a customization was mistakenly committed to `main`, branch `feature/<slug>` at that SHA → `git reset --hard origin/main` → `--no-ff` merge into `integration/vX.Y.Z`. (Verified 2026-07-22 with commit `c68c745d2`.)
 2. **Feature branch**: `git checkout integration/vX.Y.Z && git pull && git checkout -b feature/<slug>`; commit; then `git checkout integration/vX.Y.Z && git merge --no-ff feature/<slug>`.
@@ -16,7 +16,7 @@ For any code/asset change destined for production. Full details in `docs/manual/
 6. **PR** `integration/vX.Y.Z` → `main`; merge `--merge` style; sync local `main` (`git fetch && git checkout main && git pull --ff-only`).
 7. **Final tag** on merged main tip: `git tag -a vX.Y.Z-kwh.N <sha> -m "..."` → push → GH Actions builds the production image.
 8. **Production deploy**: SSH to prod → SQLite WAL-safe backup (`docker compose stop openwebui` then `tar`, OR online `sqlite3 <db> ".backup ..."`) → set `OPENWEBUI_IMAGE_TAG=vX.Y.Z-kwh.N` (with `v`), `OPENWEBUI_LOCAL_DATA`, `OPENWEBUI_DEPLOY_ENV_FILE` explicitly → `docker compose -f docker-compose.deploy.yaml pull openwebui && up -d --no-deps openwebui`; re-run full smoke.
-9. **Post-release fixes** discovered during rollout: doc-only shortcut — `feature/docs-*` branched from `main` → PR directly to `main`, no new git tag or image rebuild.
+9. **All changes (including docs)** follow the same flow: `feature/*` → `integration/vX.Y.Z` → PR → `main`. Direct `feature/docs-*` → `main` shortcut is **abolished** (2026-07-31). No new tag or image rebuild for doc-only changes.
 
 **Every session, always** log the day's work in `docs/jobs/YYYY-MM-DD-openwebui-jobs.md` (append same-day, new file when the date rolls over). Consult prior days' logs before starting to avoid repeating work.
 

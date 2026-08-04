@@ -32,7 +32,8 @@
 Reference these before touching the release or deploy path:
 
 - **Practical routine (start here)**: `docs/manual/kwh-release-routine.md` — end-to-end feature → integration → RC → staging → PR → main → final tag → prod flow, with copy-paste SSH blocks, environment variables inventory, SQLite WAL-safe backup, smoke checklist, and recovery patterns.
-- **Authoritative rules**: `docs/manual/github-actions-ghcr-release-deployment.md` — **in any doc conflict, this wins.** Covers:
+- **Top authority (coordination protocol)**: `docs/manual/github-control-plane-local-agent-handoff.ko.md` — **Protocol v1.2. In any conflict on release/deploy coordination, this wins.** Covers: local↔production agent handoff, GitHub as control plane, required release flow (all changes including docs through `feature/* → integration/vX.Y.Z → main`), deploy request Issue schema, production agent reply contract, incident matrix, state awareness.
+- **Authoritative rules (CI/CD mechanics)**: `docs/manual/github-actions-ghcr-release-deployment.md` — tag rules, GHCR conventions, image build policy. Wins when conflict is CI/CD-specific and not covered by the coordination protocol above. Covers:
   - Repository roles (`origin` push target; `upstream` fetch-only with push URL `DISABLED`).
   - Branch and release flow (`feature/*` → `integration/vX.Y.Z` via `--no-ff` → PR → `main` → tag).
   - Image build policy (immutable tags, `linux/amd64`, buildx registry cache, `v*-kwh.*` workflow trigger, RC vs final tag semantics).
@@ -41,4 +42,4 @@ Reference these before touching the release or deploy path:
 - **Session/work history**: `docs/jobs/YYYY-MM-DD-openwebui-jobs.md` under `~/projects/openwebui-service/docs/jobs/`. Each file records that day's decisions, commits, PRs, and learnings for cross-session context. Same-day work: **append** as a new `## HH:MM` section. Date change: **new file**. Consult prior days' logs before repeating work.
 - **GHCR image tag format**: `vX.Y.Z-kwh.N` (with the `v` prefix, verbatim from the git tag) and `git-<7-char-short-sha>`. Bare `X.Y.Z-kwh.N` or a full 40-char SHA are not published and will fail to `docker pull`.
 - **Never commit directly to `main`.** If it happens locally, preserve the commit by creating `feature/<slug>` at that SHA, `git reset --hard origin/main`, then merge the feature into `integration/vX.Y.Z` with `--no-ff`. Verified recovery: 2026-07-22 with commit `c68c745d2`.
-- **Doc-only changes** skip the integration cycle: branch from `main`, PR directly to `main`, no new tag.
+- **All changes (including docs)** follow the same flow: `feature/*` → `integration/vX.Y.Z` → PR → `main`. Direct `feature/docs-*` → `main` shortcut is **abolished** (2026-07-31).
