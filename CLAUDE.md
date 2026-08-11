@@ -6,7 +6,7 @@ Content-heavy edits belong in `AGENTS.md` or the linked docs. The routine summar
 
 ## Data Location Principle (요약)
 
-**One Fact, One Home** (2026-08-11 adopted): Linear = 지금 할 일 · jobs log = 오늘 실제로 한 일 · OpenViking = 다음 에이전트가 읽을 기억 (watch 대상: `docs/jobs/`, `docs/manual/`, `docs/plan/`, `AGENTS.md`, `CLAUDE.md`) · mem0 = 프로젝트 밖 개인 선호 (auto-capture 결과는 참고 캐시, 진실 소스 아님). 전체 매트릭스는 `AGENTS.md` §"Data Location Principle — One Fact, One Home".
+**One Fact, One Home** (2026-08-11 adopted): Linear = 지금 할 일 (in-flight 계획·검증·상태) · jobs log = 오늘 실제로 한 일 · `docs/plan/` = 확정된 개발·리뷰 계획 (Linear plan-approved 이후 승격) · `docs/references/` = upstream Open WebUI 버전·기능 참고자료 · OpenViking = 다음 에이전트가 읽을 기억 (watch 대상: `docs/jobs/`, `docs/manual/`, `docs/plan/`, `docs/references/`, `AGENTS.md`, `CLAUDE.md`) · mem0 = 프로젝트 밖 개인 선호 (auto-capture 결과는 참고 캐시, 진실 소스 아님). `docs/manual/` vs `docs/references/` 경계 = fork-specific vs upstream. 전체 매트릭스와 promotion path는 `AGENTS.md` §"Data Location Principle — One Fact, One Home".
 
 ## Development And Release Workflow — 5 Stages
 
