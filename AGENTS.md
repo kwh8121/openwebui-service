@@ -33,10 +33,12 @@ Adopted 2026-08-11. Each information type has one canonical home; other tools ca
 
 | 정보 유형 | 원본 위치 | 다른 도구에는 어떻게 둘 것인가 |
 | --------- | --------- | ------------------------------- |
-| 계획안, 검증 요청, 상태 전이 | Linear | jobs log에는 결과 요약만 |
+| 계획안, 검증 요청, 상태 전이 (in-flight) | Linear | jobs log에는 결과 요약만 |
+| **확정된 개발·리뷰 계획 (approved plans)** | **`docs/plan/`** | **Linear 이슈는 유지하고 `create_attachment`로 `docs/plan/<file>.md` 링크만 (승격 후에도 stage 3~4 포인터로 사용)** |
 | 세션에서 실제로 한 일 | jobs log (`docs/jobs/YYYY-MM-DD-openwebui-jobs.md`) | OpenViking이 watch로 자동 인제스션 |
 | 코드 변경, 브랜치, PR, 태그 | Git / GitHub | Linear·jobs log에는 링크와 요약만 |
 | 배포 승인·결과 evidence | GitHub Issue | Linear에는 `create_attachment` 링크만 |
+| **upstream Open WebUI 버전·기능 참고자료** | **`docs/references/`** | **jobs log에는 참조 링크만. mem0에는 넣지 않음** |
 | 장기 학습, 반복 실수, 운영 원칙 | jobs log → OpenViking | mem0에는 넣지 않음 (참고 캐시로 남을 수 있음) |
 | 개인 선호, 답변 스타일, 일반 습관 | mem0 | 프로젝트 문서에는 넣지 않음 |
 
@@ -44,10 +46,20 @@ Adopted 2026-08-11. Each information type has one canonical home; other tools ca
 
 - **A. Linear** = 지금 살아 있는 작업판. 작업 단위의 대화·상태만. 세션 전체 요약은 jobs log로 이관.
 - **B. jobs log** = 세션 종료 후 남기는 공식 작업일지. Append-only 감사 기록. 오늘 무엇을 했는가·어떤 결정을 했는가·어떤 이슈/PR/커밋이 생겼는가·어떤 문제가 발견됐는가·다음 세션 재개 지점·학습 사항을 포함.
-- **C. OpenViking** = 다음 에이전트가 읽을 장기 컨텍스트 DB. Watch 대상: `docs/jobs/`, `docs/manual/`, `docs/plan/`, `AGENTS.md`, `CLAUDE.md`. 신규/변경 자동 인제스션. Linear 승인 계획 요약과 GitHub 배포 이슈 결과는 jobs log를 게이트웨이로 자동 커버됨.
+- **C. OpenViking** = 다음 에이전트가 읽을 장기 컨텍스트 DB. Watch 대상: `docs/jobs/`, `docs/manual/`, `docs/plan/`, `docs/references/`, `AGENTS.md`, `CLAUDE.md`. GitHub repo watch(24h refresh)로 committed 파일 자동 인제스션. Linear 승인 계획은 `docs/plan/` 승격 후 자동 커버, GitHub 배포 이슈 결과는 jobs log를 게이트웨이로 커버.
 - **D. mem0** = 프로젝트 밖 개인 선호. auto-capture 훅이 프로젝트 결정도 저장하나 이는 참고 캐시이며 진실 소스가 아니다. 원칙 판단 시 jobs log와 OpenViking 이관본이 우선하며 mem0 결과에 의존하지 말 것.
 
-**한 줄 요약**: Linear = 지금 할 일 · jobs log = 오늘 실제로 한 일 · OpenViking = 다음 에이전트가 읽을 기억 · mem0 = 프로젝트 밖 개인 선호.
+**한 줄 요약**: Linear = 지금 할 일 · jobs log = 오늘 실제로 한 일 · docs/plan = 확정된 계획 · docs/references = upstream 참고 · OpenViking = 다음 에이전트가 읽을 기억 · mem0 = 프로젝트 밖 개인 선호.
+
+**`docs/manual/` vs `docs/references/` 경계 원칙 (2026-08-11 채택):**
+
+- **`docs/manual/`**: **이 fork의** 배포·운영·정책 문서 (kwh-release-routine, github-control-plane-local-agent-handoff, github-actions-ghcr-release-deployment, per-release deploy guides, oauth notes, korean-locale-image-notes, openwebui-repo, openwebui-migration-notes 등). fork 이력에 종속.
+- **`docs/references/`**: **upstream Open WebUI에 관한** 조사·업데이트·기능 참고 (release notes, 업데이트 리포트, 기능 research). fork와 무관하게 upstream 변화만 반영. 경계 모호 파일은 팀 판단, 이번 스코프에서 재분류하지 않음.
+
+**Promotion path (수동, 자동화 없음)**:
+
+- Linear plan-approved → `docs/plan/<slug>.md` 파일 작성 → Linear 이슈에 `create_attachment` 링크
+- Upstream release/기능 발견 → `docs/references/<slug>.md` 작성
 
 ## Development And Release Workflow (5 Stages)
 
