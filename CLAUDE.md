@@ -4,9 +4,13 @@ Claude Code auto-loads this file at session start. It re-exports the shared proj
 
 Content-heavy edits belong in `AGENTS.md` or the linked docs. The routine summary below is duplicated here **on purpose** so it stays in every Claude Code session's context without a lookup.
 
+## Development And Release Workflow — 5 Stages
+
+Stages 1–4 use Linear (`koreatimes` workspace, project `openwebui vX.Y.Z`); stage 5 (deployment) stays on GitHub Issue per the opencode contract. Full definition in `AGENTS.md` §"Development And Release Workflow (5 Stages)". Label progression per issue: `plan-draft` → `needs-review` → `plan-approved` → (dev) → `verify-request` → `verify-passed` → (GitHub deploy Issue).
+
 ## Production Release Routine (at-a-glance)
 
-For any code/asset change destined for production. Full details in `docs/manual/kwh-release-routine.md`; coordination protocol (top authority) in `docs/manual/github-control-plane-local-agent-handoff.ko.md` (Protocol v1.2); CI/CD mechanics in `docs/manual/github-actions-ghcr-release-deployment.md`.
+For stage 5 (any code/asset change destined for production). Full details in `docs/manual/kwh-release-routine.md`; coordination protocol (top authority) in `docs/manual/github-control-plane-local-agent-handoff.ko.md` (Protocol v1.2); CI/CD mechanics in `docs/manual/github-actions-ghcr-release-deployment.md`.
 
 1. **Recovery guard**: if a customization was mistakenly committed to `main`, branch `feature/<slug>` at that SHA → `git reset --hard origin/main` → `--no-ff` merge into `integration/vX.Y.Z`. (Verified 2026-07-22 with commit `c68c745d2`.)
 2. **Feature branch**: `git checkout integration/vX.Y.Z && git pull && git checkout -b feature/<slug>`; commit; then `git checkout integration/vX.Y.Z && git merge --no-ff feature/<slug>`.
