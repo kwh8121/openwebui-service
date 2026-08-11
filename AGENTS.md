@@ -27,6 +27,28 @@
 - Develop custom changes in `feature/*`, merge official releases and features into `integration/vX.Y.Z`, then open verified integration PRs against `main`. Use typed PR titles and keep the required CLA section in the PR description.
 - The root Compose configuration is deployment-specific: it loads `.env.openwebui.oauth`, exposes port 80, and joins `shared_bridge_network`. Do not assume it is a generic local development stack.
 
+## Data Location Principle — One Fact, One Home
+
+Adopted 2026-08-11. Each information type has one canonical home; other tools carry a link or short summary, never a duplicate.
+
+| 정보 유형 | 원본 위치 | 다른 도구에는 어떻게 둘 것인가 |
+| --------- | --------- | ------------------------------- |
+| 계획안, 검증 요청, 상태 전이 | Linear | jobs log에는 결과 요약만 |
+| 세션에서 실제로 한 일 | jobs log (`docs/jobs/YYYY-MM-DD-openwebui-jobs.md`) | OpenViking이 watch로 자동 인제스션 |
+| 코드 변경, 브랜치, PR, 태그 | Git / GitHub | Linear·jobs log에는 링크와 요약만 |
+| 배포 승인·결과 evidence | GitHub Issue | Linear에는 `create_attachment` 링크만 |
+| 장기 학습, 반복 실수, 운영 원칙 | jobs log → OpenViking | mem0에는 넣지 않음 (참고 캐시로 남을 수 있음) |
+| 개인 선호, 답변 스타일, 일반 습관 | mem0 | 프로젝트 문서에는 넣지 않음 |
+
+**4-도구 역할 요약:**
+
+- **A. Linear** = 지금 살아 있는 작업판. 작업 단위의 대화·상태만. 세션 전체 요약은 jobs log로 이관.
+- **B. jobs log** = 세션 종료 후 남기는 공식 작업일지. Append-only 감사 기록. 오늘 무엇을 했는가·어떤 결정을 했는가·어떤 이슈/PR/커밋이 생겼는가·어떤 문제가 발견됐는가·다음 세션 재개 지점·학습 사항을 포함.
+- **C. OpenViking** = 다음 에이전트가 읽을 장기 컨텍스트 DB. Watch 대상: `docs/jobs/`, `docs/manual/`, `docs/plan/`, `AGENTS.md`, `CLAUDE.md`. 신규/변경 자동 인제스션. Linear 승인 계획 요약과 GitHub 배포 이슈 결과는 jobs log를 게이트웨이로 자동 커버됨.
+- **D. mem0** = 프로젝트 밖 개인 선호. auto-capture 훅이 프로젝트 결정도 저장하나 이는 참고 캐시이며 진실 소스가 아니다. 원칙 판단 시 jobs log와 OpenViking 이관본이 우선하며 mem0 결과에 의존하지 말 것.
+
+**한 줄 요약**: Linear = 지금 할 일 · jobs log = 오늘 실제로 한 일 · OpenViking = 다음 에이전트가 읽을 기억 · mem0 = 프로젝트 밖 개인 선호.
+
 ## Development And Release Workflow (5 Stages)
 
 Full lifecycle for any change destined for production. Stages 1–4 use Linear (`koreatimes` workspace, project `openwebui vX.Y.Z`); stage 5 stays on GitHub Issue per the existing opencode production agent contract.
@@ -49,7 +71,7 @@ Full lifecycle for any change destined for production. Stages 1–4 use Linear (
 
 **Rationale**: Stages 1–2 (planning + plan verification) gain the most from Linear's hierarchical issue model and comment-based review — text-only planning misses design gaps that comment threads catch. Deployment stays on GitHub because the opencode production agent contract is stable and changing it would risk regression. Validated in the 2026-08-11 scenario-B walkthrough (see `docs/jobs/2026-08-11-openwebui-jobs.md`), where the verifier caught a Bootstrap paradox in the runner health monitoring plan that the planner had missed.
 
-**Note on jobs log coexistence**: `docs/jobs/YYYY-MM-DD-openwebui-jobs.md` remains the session-level truth (append-only, cross-session context). Linear comments are per-issue conversation. Use both, don't duplicate.
+**Note on jobs log coexistence**: See §"Data Location Principle" above for the full boundary matrix. Short version: jobs log is the session-level truth (append-only); Linear comments are per-issue conversation; OpenViking watches jobs log for automatic ingestion; mem0 is personal preferences only.
 
 ## Release Routine And Session Continuity
 
