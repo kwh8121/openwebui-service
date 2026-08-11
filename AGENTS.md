@@ -27,6 +27,30 @@
 - Develop custom changes in `feature/*`, merge official releases and features into `integration/vX.Y.Z`, then open verified integration PRs against `main`. Use typed PR titles and keep the required CLA section in the PR description.
 - The root Compose configuration is deployment-specific: it loads `.env.openwebui.oauth`, exposes port 80, and joins `shared_bridge_network`. Do not assume it is a generic local development stack.
 
+## Development And Release Workflow (5 Stages)
+
+Full lifecycle for any change destined for production. Stages 1–4 use Linear (`koreatimes` workspace, project `openwebui vX.Y.Z`); stage 5 stays on GitHub Issue per the existing opencode production agent contract.
+
+1. **계획 (Planning)** — Planner agent creates Linear Project + Parent issue + Sub-issues. Label: `plan-draft`. Uses parent/child hierarchy, `blockedBy` for dependencies, `gitBranchName` auto-generated for future branch naming.
+2. **계획 검증 (Plan verification)** — Planner transitions parent label `plan-draft` → `needs-review`. Verifier agent picks up via `list_issues --label needs-review`, posts findings as issue comments (PASS/CRITICAL/MEDIUM/MINOR + verdict), transitions label to `plan-approved` (approved) or back to `plan-draft` (revision requested). Comment thread is the audit surface.
+3. **개발 (Development)** — Dev agent picks up a `plan-approved` sub-issue, creates feature branch using the issue's `gitBranchName` field. Standard `feature/* → integration/vX.Y.Z → main` flow (see §"Release Routine And Session Continuity" below). Linear issue tracks status ("In Progress") as a progress pointer; git holds the truth.
+4. **개발 검증 (Dev review)** — Dev agent transitions issue label to `verify-request`. Verifier agent picks up, reviews diff (via GitHub PR linked to the Linear issue as `create_attachment`), posts findings, transitions to `verify-passed`. Same comment-thread audit pattern as stage 2.
+5. **배포 (Deployment)** — **Unchanged, stays on GitHub Issue.** Local dev agent submits `Production deployment request` Issue per handoff §"배포 요청 계약" (Protocol v1.2). Opencode production agent executes via `deploy-approved-production-release.yaml` workflow. Linear issue references the GitHub deployment Issue URL via `create_attachment` for audit trail.
+
+**Label vocabulary** (workspace-level, created 2026-08-11):
+
+| Label | Color | Meaning |
+| ----- | ----- | ------- |
+| `plan-draft` | gray | Planner is still writing the plan |
+| `needs-review` | yellow | Plan complete, awaits plan verifier |
+| `plan-approved` | teal | Plan verified, ready for dev pickup |
+| `verify-request` | orange | Dev complete, awaits dev verifier |
+| `verify-passed` | green | Dev verified, ready for deployment handoff to GitHub |
+
+**Rationale**: Stages 1–2 (planning + plan verification) gain the most from Linear's hierarchical issue model and comment-based review — text-only planning misses design gaps that comment threads catch. Deployment stays on GitHub because the opencode production agent contract is stable and changing it would risk regression. Validated in the 2026-08-11 scenario-B walkthrough (see `docs/jobs/2026-08-11-openwebui-jobs.md`), where the verifier caught a Bootstrap paradox in the runner health monitoring plan that the planner had missed.
+
+**Note on jobs log coexistence**: `docs/jobs/YYYY-MM-DD-openwebui-jobs.md` remains the session-level truth (append-only, cross-session context). Linear comments are per-issue conversation. Use both, don't duplicate.
+
 ## Release Routine And Session Continuity
 
 Reference these before touching the release or deploy path:
