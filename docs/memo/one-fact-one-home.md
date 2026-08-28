@@ -14,16 +14,16 @@
 
 ### 정보 유형별 원본 위치
 
-| 정보 유형 | 원본 위치 | 다른 도구에는 어떻게 둘 것인가 |
-| --------- | --------- | ------------------------------- |
-| 계획안, 검증 요청, 상태 전이 (in-flight) | **Linear** (`koreatimes` 워크스페이스) | jobs log에는 결과 요약만 |
-| **확정된 개발·리뷰 계획 (approved plans)** | **`docs/plan/`** | Linear 이슈 유지 + `create_attachment`로 파일 링크 |
-| 세션에서 실제로 한 일 | **jobs log** (`docs/jobs/YYYY-MM-DD-openwebui-jobs.md`) | OpenViking watch로 자동 인제스션 |
-| 코드 변경, 브랜치, PR, 태그 | **Git / GitHub** | Linear·jobs log에는 링크와 요약만 |
-| 배포 승인·결과 evidence | **GitHub Issue** (`production-deploy` 라벨) | Linear에는 `create_attachment` 링크만 |
-| **upstream Open WebUI 버전·기능 참고자료** | **`docs/references/`** | jobs log에는 참조 링크만 |
-| 장기 학습, 반복 실수, 운영 원칙 | jobs log → **OpenViking** | mem0에는 넣지 않음 (참고 캐시 허용) |
-| 개인 선호, 답변 스타일, 일반 습관 | **mem0** | 프로젝트 문서에는 넣지 않음 |
+| 정보 유형                                  | 원본 위치                                               | 다른 도구에는 어떻게 둘 것인가                     |
+| ------------------------------------------ | ------------------------------------------------------- | -------------------------------------------------- |
+| 계획안, 검증 요청, 상태 전이 (in-flight)   | **Linear** (`koreatimes` 워크스페이스)                  | jobs log에는 결과 요약만                           |
+| **확정된 개발·리뷰 계획 (approved plans)** | **`docs/plan/`**                                        | Linear 이슈 유지 + `create_attachment`로 파일 링크 |
+| 세션에서 실제로 한 일                      | **jobs log** (`docs/jobs/YYYY-MM-DD-openwebui-jobs.md`) | OpenViking watch로 자동 인제스션                   |
+| 코드 변경, 브랜치, PR, 태그                | **Git / GitHub**                                        | Linear·jobs log에는 링크와 요약만                  |
+| 배포 승인·결과 evidence                    | **GitHub Issue** (`production-deploy` 라벨)             | Linear에는 `create_attachment` 링크만              |
+| **upstream Open WebUI 버전·기능 참고자료** | **`docs/references/`**                                  | jobs log에는 참조 링크만                           |
+| 장기 학습, 반복 실수, 운영 원칙            | jobs log → **OpenViking**                               | mem0에는 넣지 않음 (참고 캐시 허용)                |
+| 개인 선호, 답변 스타일, 일반 습관          | **mem0**                                                | 프로젝트 문서에는 넣지 않음                        |
 
 ### 4-도구 역할 (한 줄 요약)
 
@@ -118,13 +118,13 @@
 
 ## 3. Linear 라벨 vocabulary (workspace-level, 2026-08-11 생성)
 
-| Label | Color | 의미 |
-| ----- | ----- | ---- |
-| `plan-draft` | gray | Planner 작성 중 |
-| `needs-review` | yellow | 계획 완성, 검증 대기 |
-| `plan-approved` | teal | 검증 통과, dev 착수 준비 |
-| `verify-request` | orange | 개발 완료, 검증 대기 |
-| `verify-passed` | green | 검증 통과, GitHub 배포 인계 준비 |
+| Label            | Color  | 의미                             |
+| ---------------- | ------ | -------------------------------- |
+| `plan-draft`     | gray   | Planner 작성 중                  |
+| `needs-review`   | yellow | 계획 완성, 검증 대기             |
+| `plan-approved`  | teal   | 검증 통과, dev 착수 준비         |
+| `verify-request` | orange | 개발 완료, 검증 대기             |
+| `verify-passed`  | green  | 검증 통과, GitHub 배포 인계 준비 |
 
 **전이 요약**: `plan-draft` → `needs-review` → `plan-approved` → (dev) → `verify-request` → `verify-passed` → (GitHub deploy Issue).
 
@@ -148,12 +148,14 @@ vX.Y.Z-kwh.N           ← immutable tag → GHCR image build 트리거
 ```
 
 **규칙:**
+
 - Doc-only 변경도 동일 경로 (`feature/docs-* → main` 우회 폐기, 2026-07-31)
 - `main`에 직접 커밋 금지 (실수 시 recovery: feature 브랜치 파고 `git reset --hard origin/main`)
 - Immutable tag 재작성 금지 (수정은 항상 `-kwh.<N+1>` 새 태그)
 - GHCR 이미지 태그: `vX.Y.Z-kwh.N` (v prefix 필수) + `git-<7-char-short-sha>`
 
 **PR 예시** (이 세션 흐름):
+
 - PR #17: docs 5-stage workflow
 - PR #18: Data Location Principle
 - PR #19: docs/jobs 백필 커밋
@@ -205,6 +207,7 @@ vX.Y.Z-kwh.N           ← immutable tag → GHCR image build 트리거
 - **스킬 특성**: `AskUserQuestion`으로 append vs 신규 sibling 파일 확인. 자동 커밋 안 함 (사람이 별도 스텝으로 커밋).
 
 **jobs log에 담아야 할 것:**
+
 - 그날의 실제 활동·결정 (자동 요약)
 - 이슈/PR/커밋 링크 + 짧은 요약
 - 발견된 문제·미해결 사항
@@ -214,6 +217,7 @@ vX.Y.Z-kwh.N           ← immutable tag → GHCR image build 트리거
 - GitHub 배포 이슈·태그 이벤트 요약
 
 **jobs log에 담지 말아야 할 것:**
+
 - Linear 이슈 본문·코멘트 원문 (링크만)
 - 코드 diff 전체 (커밋/PR 링크만)
 - 계획 검토 대화 원문 (Linear 코멘트 스레드 링크)
@@ -223,27 +227,27 @@ vX.Y.Z-kwh.N           ← immutable tag → GHCR image build 트리거
 
 ## 8. 하네스 구성 (Claude Code 세션 관점)
 
-| 구성요소 | 정체 | 역할 |
-|---------|------|------|
-| Claude Code CLI | Anthropic 공식 CLI | 세션 컨테이너 |
-| **openwebui-jobs 스킬** | `~/.claude/skills/openwebui-jobs/SKILL.md` | 세션 로그 저장 (jobs log gateway) |
-| **Linear MCP** | `linear-server` (`https://mcp.linear.app/mcp`) | 5-단계 워크플로 stages 1·2·4 조작 |
-| **OpenViking MCP** | `openviking-memory` 플러그인 | 장기 컨텍스트 DB, 24h watch |
-| **mem0 MCP** | `mem0.ai` 플러그인 | 개인 선호 (auto-capture 훅 유지, 참고 캐시) |
-| **gh CLI** | GitHub CLI | Stage 3·5 (PR·Issue·workflow dispatch) |
-| **Serena MCP** | 코드 심볼 인덱스 | 코드 탐색 (필요 시) |
-| **오래된 mem0 auto-hook** | SessionStart / UserPromptSubmit | 프로젝트 결정도 mem0에 저장 (참고 캐시로 인정, 진실 소스 아님) |
+| 구성요소                  | 정체                                           | 역할                                                           |
+| ------------------------- | ---------------------------------------------- | -------------------------------------------------------------- |
+| Claude Code CLI           | Anthropic 공식 CLI                             | 세션 컨테이너                                                  |
+| **openwebui-jobs 스킬**   | `~/.claude/skills/openwebui-jobs/SKILL.md`     | 세션 로그 저장 (jobs log gateway)                              |
+| **Linear MCP**            | `linear-server` (`https://mcp.linear.app/mcp`) | 5-단계 워크플로 stages 1·2·4 조작                              |
+| **OpenViking MCP**        | `openviking-memory` 플러그인                   | 장기 컨텍스트 DB, 24h watch                                    |
+| **mem0 MCP**              | `mem0.ai` 플러그인                             | 개인 선호 (auto-capture 훅 유지, 참고 캐시)                    |
+| **gh CLI**                | GitHub CLI                                     | Stage 3·5 (PR·Issue·workflow dispatch)                         |
+| **Serena MCP**            | 코드 심볼 인덱스                               | 코드 탐색 (필요 시)                                            |
+| **오래된 mem0 auto-hook** | SessionStart / UserPromptSubmit                | 프로젝트 결정도 mem0에 저장 (참고 캐시로 인정, 진실 소스 아님) |
 
 **핵심 소통 채널 매핑**:
 
-| 채널 | 도구 |
-|------|------|
-| 개발자 ↔ Planner 에이전트 | 대화 (직접) |
-| Planner ↔ Verifier | Linear 이슈 + 코멘트 |
-| Dev 에이전트 ↔ Verifier | Linear 이슈 라벨 + 코멘트 + GitHub PR 첨부 |
-| 로컬 에이전트 ↔ 프로덕션 에이전트 (opencode) | GitHub Issue (`production-deploy` 라벨) |
-| 프로덕션 에이전트 ↔ 관리자 | GitHub Environment 승인 + Issue 코멘트 (browser acceptance) |
-| 세션 A ↔ 세션 B (같은 프로젝트) | jobs log + OpenViking watch |
+| 채널                                         | 도구                                                        |
+| -------------------------------------------- | ----------------------------------------------------------- |
+| 개발자 ↔ Planner 에이전트                    | 대화 (직접)                                                 |
+| Planner ↔ Verifier                           | Linear 이슈 + 코멘트                                        |
+| Dev 에이전트 ↔ Verifier                      | Linear 이슈 라벨 + 코멘트 + GitHub PR 첨부                  |
+| 로컬 에이전트 ↔ 프로덕션 에이전트 (opencode) | GitHub Issue (`production-deploy` 라벨)                     |
+| 프로덕션 에이전트 ↔ 관리자                   | GitHub Environment 승인 + Issue 코멘트 (browser acceptance) |
+| 세션 A ↔ 세션 B (같은 프로젝트)              | jobs log + OpenViking watch                                 |
 
 ---
 
@@ -317,24 +321,28 @@ vX.Y.Z-kwh.N           ← immutable tag → GHCR image build 트리거
 ## 11. 인프라 현재 상태 (2026-08-12 기준)
 
 **GitHub 저장소:**
+
 - 원본: `https://github.com/kwh8121/openwebui-service`
 - Main tip: `a97033fc7` (PR #20 머지 후)
 - `integration/v0.11.0` = main과 동기
 - 프로덕션 이미지: `ghcr.io/kwh8121/openwebui-service:v0.11.0-kwh.1`
 
 **컨트롤 플레인:**
+
 - `production` GitHub Environment (required reviewer: `kwh8121`)
 - Self-hosted runner `openwebui-prod-runner` (systemd active, labels `self-hosted, Linux, X64, production`)
 - Workflow `.github/workflows/deploy-approved-production-release.yaml` (296줄, v1.2 하드닝 완료)
 - Issue form `.github/ISSUE_TEMPLATE/production_deployment_request.yaml`
 
 **Linear:**
+
 - Workspace: `koreatimes` (id `4342ee5a-...`)
 - Team: `Koreatimes` (KOR)
 - Project: `openwebui v0.11.1` (v0.11.1 kwh 사이클 계획 컨테이너)
 - 활성 이슈: KOR-5~8 (Runner health monitoring 계획, plan-draft 상태)
 
 **OpenViking:**
+
 - Resource: `viking://resources/kwh8121/openwebui-service`
 - Watch: 24h refresh, 자동 인제스션
 
