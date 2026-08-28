@@ -322,3 +322,10 @@ cypress/screenshots
 .serena/
 sesstion.txt
 skills-lock.json
+
+# opencode local commands/skills (personal scope)
+.opencode/commands/
+.opencode/skills/
+
+# Claude Code harness local state (personal scope)
+.claude/
