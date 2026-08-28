@@ -83,7 +83,7 @@ jobs:
           guide_path="docs/manual/kwh-deploy-guide-${RELEASE_TAG}.md"
           gh api "repos/${GITHUB_REPOSITORY}/contents/${guide_path}?ref=${GUIDE_COMMIT}" --silent >/dev/null
           comparison=$(gh api "repos/${GITHUB_REPOSITORY}/compare/${RELEASE_TAG}...main" --jq .status)
-          if [[ "$comparison" != "identical" && "$comparison" != "behind" ]]; then
+          if [[ "$comparison" != "identical" && "$comparison" != "ahead" ]]; then
             echo "::error::release tag ${RELEASE_TAG} is not on main lineage"
             exit 1
           fi

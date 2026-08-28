@@ -13,6 +13,7 @@ node_modules
 docker-compose.yaml.bak
 docker-compose.yaml.before-image-tag-change
 openwebui/
+/data/state_store.db/
 pipelines/**/valves.json
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
