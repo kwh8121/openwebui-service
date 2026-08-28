@@ -26,15 +26,15 @@ plugin이 호출하는 CLI:
 
 ## 네이티브 도구
 
-| 도구 | 목적 |
-| --- | --- |
-| `notebooklm_list_notebooks` | 접근 가능한 모든 NotebookLM 노트북을 나열합니다. |
-| `notebooklm_list_sources` | 지정 노트북의 인덱싱된 source를 나열합니다. |
-| `notebooklm_list_saved` | 지정 노트북에 저장된 note를 나열합니다. |
-| `notebooklm_search_saved` | 제목 또는 미리보기 텍스트로 저장된 note를 찾습니다. |
-| `notebooklm_read` | 저장된 note 또는 인덱싱된 source 텍스트를 읽습니다. |
-| `notebooklm_save` | 저장된 note를 생성하거나 수정합니다. |
-| `notebooklm_search` | 인덱싱된 source를 대상으로 근거 및 citation이 포함된 NotebookLM 질문을 실행합니다. |
+| 도구                        | 목적                                                                               |
+| --------------------------- | ---------------------------------------------------------------------------------- |
+| `notebooklm_list_notebooks` | 접근 가능한 모든 NotebookLM 노트북을 나열합니다.                                   |
+| `notebooklm_list_sources`   | 지정 노트북의 인덱싱된 source를 나열합니다.                                        |
+| `notebooklm_list_saved`     | 지정 노트북에 저장된 note를 나열합니다.                                            |
+| `notebooklm_search_saved`   | 제목 또는 미리보기 텍스트로 저장된 note를 찾습니다.                                |
+| `notebooklm_read`           | 저장된 note 또는 인덱싱된 source 텍스트를 읽습니다.                                |
+| `notebooklm_save`           | 저장된 note를 생성하거나 수정합니다.                                               |
+| `notebooklm_search`         | 인덱싱된 source를 대상으로 근거 및 citation이 포함된 NotebookLM 질문을 실행합니다. |
 
 ## 일반적인 네이티브 흐름
 
@@ -54,9 +54,9 @@ notebook을 다루는 모든 도구에는 전체 `notebook_id` 가 필요합니�
 
 ```json
 {
-  "notebook_id": "<full notebook UUID>",
-  "item_id": "<full note or source UUID>",
-  "item_type": "note"
+	"notebook_id": "<full notebook UUID>",
+	"item_id": "<full note or source UUID>",
+	"item_type": "note"
 }
 ```
 

@@ -20,18 +20,18 @@
 
 아래 표는 프로젝트에 가장 큰 영향을 미치는 변경사항을 우선순위순으로 정리한 것입니다.
 
-| # | 변경 사항 | 영향도 | 해당 파일 |
-|---|---------|--------|---------|
-| **1** | **Sub-agents (v0.11.0 신규)** | **높음** | 03-models, MVP 보완본 |
-| **2** | **Calendar 기능 (신규 섹션)** | **높음** | 가이드 신규 파일 필요 |
-| **3** | **MCP: Streamable HTTP 전용 + OAuth 2.1** | **높음** | 03-models, 07-deploy |
-| 4 | Ecosystem 섹션 (Computer, oikb) | 중간 | 06-terminal, README |
-| 5 | Fully Async 백엔드 전환 | 중간 | 03-models, MVP 보완본 |
-| 6 | Knowledge: 13 VDB + 8 엔진 + Agentic | 중간 | 02-knowledge |
-| 7 | Chat: Fork, Timer, Queue, Variables | 중간 | 01-chat |
-| 8 | UI 전면 재설계 (v0.11.0) | 낮음 | CSS 커스터마이징 재검증 |
-| 9 | LDAP 그룹 동기화 강화 | 낮음 | 05-auth |
-| 10 | 성능 최적화 대량 적용 | 낮음 | 07-deploy |
+| #     | 변경 사항                                 | 영향도   | 해당 파일               |
+| ----- | ----------------------------------------- | -------- | ----------------------- |
+| **1** | **Sub-agents (v0.11.0 신규)**             | **높음** | 03-models, MVP 보완본   |
+| **2** | **Calendar 기능 (신규 섹션)**             | **높음** | 가이드 신규 파일 필요   |
+| **3** | **MCP: Streamable HTTP 전용 + OAuth 2.1** | **높음** | 03-models, 07-deploy    |
+| 4     | Ecosystem 섹션 (Computer, oikb)           | 중간     | 06-terminal, README     |
+| 5     | Fully Async 백엔드 전환                   | 중간     | 03-models, MVP 보완본   |
+| 6     | Knowledge: 13 VDB + 8 엔진 + Agentic      | 중간     | 02-knowledge            |
+| 7     | Chat: Fork, Timer, Queue, Variables       | 중간     | 01-chat                 |
+| 8     | UI 전면 재설계 (v0.11.0)                  | 낮음     | CSS 커스터마이징 재검증 |
+| 9     | LDAP 그룹 동기화 강화                     | 낮음     | 05-auth                 |
+| 10    | 성능 최적화 대량 적용                     | 낮음     | 07-deploy               |
 
 ---
 
@@ -112,20 +112,20 @@ OpenWebUI 백엔드가 완전 비동기(fully async)로 전환되었습니다. �
 
 **추가/변경된 기능:**
 
-| 기능 | 설명 | 버전 |
-|------|------|------|
-| **Chat Fork** | 대화의 특정 지점에서 분기하여 별도 채팅으로 복사. 원본 유지 | v0.11.0 |
-| **Chat Timer** | 모델이 타이머를 설정하여 지정 시간 후 프롬프트 재진입 | v0.11.0 |
-| **Chat Variables** | 시스템 프롬프트에서 텍스트박스/드롭다운 필드 선언, 대화별 값 저장 | v0.11.0 |
-| **Message Queue** | AI 응답 중에도 계속 타이핑 가능, 메시지 자동 전송 | v0.10+ |
-| **Chat Compact 명령** | 긴 대화를 수동으로 즉시 요약 (자동 임계치 대기 불필요) | v0.11.0 |
-| **공개 채팅 공유** | 로그인 없이 링크로 채팅 열람 가능 (관리자 허용 필요) | v0.11.0 |
-| **Chat Preview** | 사이드바에서 채팅 호버 시 최근 메시지 미리보기 | v0.11.0 |
-| **읽지 않음 표시** | 폴더에 읽지 않은 채팅 수 배지, 읽음 표시 관리 | v0.11.0 |
-| **Folder Pages** | 폴더를 열면 전용 페이지에서 채팅 정렬/페이징 | v0.11.0 |
-| **Context Status** | 슬래시 메뉴에서 컨텍스트 윈도우 사용량 확인 | v0.11.0 |
-| **User Variables** | 계정 설정에서 개인 변수 저장, 시스템 프롬프트에 삽입 | v0.11.0 |
-| **Agentic File 검색** | 모델이 첨부 파일을 의미/텍스트 검색으로 자율 탐색 | v0.11.0 |
+| 기능                  | 설명                                                              | 버전    |
+| --------------------- | ----------------------------------------------------------------- | ------- |
+| **Chat Fork**         | 대화의 특정 지점에서 분기하여 별도 채팅으로 복사. 원본 유지       | v0.11.0 |
+| **Chat Timer**        | 모델이 타이머를 설정하여 지정 시간 후 프롬프트 재진입             | v0.11.0 |
+| **Chat Variables**    | 시스템 프롬프트에서 텍스트박스/드롭다운 필드 선언, 대화별 값 저장 | v0.11.0 |
+| **Message Queue**     | AI 응답 중에도 계속 타이핑 가능, 메시지 자동 전송                 | v0.10+  |
+| **Chat Compact 명령** | 긴 대화를 수동으로 즉시 요약 (자동 임계치 대기 불필요)            | v0.11.0 |
+| **공개 채팅 공유**    | 로그인 없이 링크로 채팅 열람 가능 (관리자 허용 필요)              | v0.11.0 |
+| **Chat Preview**      | 사이드바에서 채팅 호버 시 최근 메시지 미리보기                    | v0.11.0 |
+| **읽지 않음 표시**    | 폴더에 읽지 않은 채팅 수 배지, 읽음 표시 관리                     | v0.11.0 |
+| **Folder Pages**      | 폴더를 열면 전용 페이지에서 채팅 정렬/페이징                      | v0.11.0 |
+| **Context Status**    | 슬래시 메뉴에서 컨텍스트 윈도우 사용량 확인                       | v0.11.0 |
+| **User Variables**    | 계정 설정에서 개인 변수 저장, 시스템 프롬프트에 삽입              | v0.11.0 |
+| **Agentic File 검색** | 모델이 첨부 파일을 의미/텍스트 검색으로 자율 탐색                 | v0.11.0 |
 
 ### 3-2. Knowledge & RAG (02-knowledge-and-rag.md)
 
@@ -204,25 +204,25 @@ OpenWebUI 백엔드가 완전 비동기(fully async)로 전환되었습니다. �
 
 ### 4-1. 보완본 V1 수정 필요 사항
 
-| 항목 | 현재 내용 | 수정 방향 |
-|------|---------|---------|
-| 1-3 확장 수단표 | Event Function 미포함 | Event Function 행 추가 (on_enable/on_disable 이벤트) |
-| MCP 관련 | 미언급 | MCP Streamable HTTP + mcpo 프록시 설명 추가 |
-| 3장 업그레이드 안전성 | CSS 오버라이드 언급 | v0.11.0 UI 재설계로 CSS 패치 재검증 필수 명시 |
-| 5-1 보도자료 파이프라인 | Pipe Function 권장 | Async 백엔드 활용 가능성 언급 (인프로세스 장시간 작업 가능) |
-| 5-4 Automation | 주기/트리거 연결 | Calendar 통합 설명 추가 (Scheduled Tasks 가상 캘린더) |
-| 6장 SG9 RAG | Knowledge 바인딩 권장 | Agentic Retrieval + oikb 동기화 도구 언급 |
+| 항목                    | 현재 내용             | 수정 방향                                                   |
+| ----------------------- | --------------------- | ----------------------------------------------------------- |
+| 1-3 확장 수단표         | Event Function 미포함 | Event Function 행 추가 (on_enable/on_disable 이벤트)        |
+| MCP 관련                | 미언급                | MCP Streamable HTTP + mcpo 프록시 설명 추가                 |
+| 3장 업그레이드 안전성   | CSS 오버라이드 언급   | v0.11.0 UI 재설계로 CSS 패치 재검증 필수 명시               |
+| 5-1 보도자료 파이프라인 | Pipe Function 권장    | Async 백엔드 활용 가능성 언급 (인프로세스 장시간 작업 가능) |
+| 5-4 Automation          | 주기/트리거 연결      | Calendar 통합 설명 추가 (Scheduled Tasks 가상 캘린더)       |
+| 6장 SG9 RAG             | Knowledge 바인딩 권장 | Agentic Retrieval + oikb 동기화 도구 언급                   |
 
 ### 4-2. 개선안 수정 필요 사항
 
-| 항목 | 현재 내용 | 수정 방향 |
-|------|---------|---------|
-| 1-1 타임라인 | v0.10.x 기준 | v0.11.0 UI 재설계 반영 (브랜딩/CSS Phase 7 리스크 증가) |
-| 3-1 테스트 전략 | 기능 테스트 중심 | v0.11.0 보안 수정사항 반영한 보안 테스트 항목 추가 |
-| 4. 편집국 기능 | 6종 제안 | Calendar 연동 기능 추가 제안 가능 |
-| 5-1 운영 체계 | 기본 모니터링 | OpenTelemetry + ENABLE_ORJSON 활용 언급 |
-| 8-1 시스템 프롬프트 | 모델별 관리 | User Variables + Chat Variables 활용 방안 추가 |
-| 8-2 비용 관리 | 모델 티어링 | Sub-agents 비용 고려사항 추가 |
+| 항목                | 현재 내용        | 수정 방향                                               |
+| ------------------- | ---------------- | ------------------------------------------------------- |
+| 1-1 타임라인        | v0.10.x 기준     | v0.11.0 UI 재설계 반영 (브랜딩/CSS Phase 7 리스크 증가) |
+| 3-1 테스트 전략     | 기능 테스트 중심 | v0.11.0 보안 수정사항 반영한 보안 테스트 항목 추가      |
+| 4. 편집국 기능      | 6종 제안         | Calendar 연동 기능 추가 제안 가능                       |
+| 5-1 운영 체계       | 기본 모니터링    | OpenTelemetry + ENABLE_ORJSON 활용 언급                 |
+| 8-1 시스템 프롬프트 | 모델별 관리      | User Variables + Chat Variables 활용 방안 추가          |
+| 8-2 비용 관리       | 모델 티어링      | Sub-agents 비용 고려사항 추가                           |
 
 ### 4-3. 신규 활용 기회
 
@@ -250,19 +250,19 @@ AP Style Guide, Korea Times House Style 문서를 Git 리포나 공유 폴더에
 
 ## 5. 가이드 파일 업데이트 권고
 
-| 파일 | 업데이트 유형 | 주요 내용 |
-|------|------------|---------|
-| 01-chat-and-conversations.md | **수정** | Fork, Timer, Queue, Variables, Compact, Sub-agents 추가 |
-| 02-knowledge-and-rag.md | **수정** | 13 VDB, 8 엔진, Agentic Retrieval, Hybrid Search, oikb 추가 |
-| 03-models-workspace-and-extensibility.md | **수정** | Skills, Sub-agents, MCP Streamable HTTP, Memory toggle 추가 |
-| 04-notes-channels-and-collaboration.md | **수정** | Agentic access, Shared Folders, 채널 AI awareness 추가 |
-| 05-auth-access-and-administration.md | **수정** | LDAP 그룹 동기화, OAuth toggle, PKCE, Usage 대시보드 추가 |
-| 06-open-terminal-and-code-execution.md | **수정** | Ecosystem 분리, Computer, Terminals orchestrator 추가 |
-| 07-deployment-integrations-and-operations.md | **수정** | Cloud Storage, Redis 개선, OTEL, orjson, Sovereign AI 추가 |
-| 08-tutorial-map.md | **수정** | Ecosystem, Calendar, MCP 관련 튜토리얼 참조 추가 |
-| **09-calendar.md** | **신규** | Calendar 기능 전체 가이드 (신규 파일) |
-| **10-ecosystem.md** | **신규** | Ecosystem (Terminal, Computer, oikb) 가이드 |
-| README.md | **수정** | 가이드 맵에 09, 10번 추가, 버전 정보 업데이트 |
+| 파일                                         | 업데이트 유형 | 주요 내용                                                   |
+| -------------------------------------------- | ------------- | ----------------------------------------------------------- |
+| 01-chat-and-conversations.md                 | **수정**      | Fork, Timer, Queue, Variables, Compact, Sub-agents 추가     |
+| 02-knowledge-and-rag.md                      | **수정**      | 13 VDB, 8 엔진, Agentic Retrieval, Hybrid Search, oikb 추가 |
+| 03-models-workspace-and-extensibility.md     | **수정**      | Skills, Sub-agents, MCP Streamable HTTP, Memory toggle 추가 |
+| 04-notes-channels-and-collaboration.md       | **수정**      | Agentic access, Shared Folders, 채널 AI awareness 추가      |
+| 05-auth-access-and-administration.md         | **수정**      | LDAP 그룹 동기화, OAuth toggle, PKCE, Usage 대시보드 추가   |
+| 06-open-terminal-and-code-execution.md       | **수정**      | Ecosystem 분리, Computer, Terminals orchestrator 추가       |
+| 07-deployment-integrations-and-operations.md | **수정**      | Cloud Storage, Redis 개선, OTEL, orjson, Sovereign AI 추가  |
+| 08-tutorial-map.md                           | **수정**      | Ecosystem, Calendar, MCP 관련 튜토리얼 참조 추가            |
+| **09-calendar.md**                           | **신규**      | Calendar 기능 전체 가이드 (신규 파일)                       |
+| **10-ecosystem.md**                          | **신규**      | Ecosystem (Terminal, Computer, oikb) 가이드                 |
+| README.md                                    | **수정**      | 가이드 맵에 09, 10번 추가, 버전 정보 업데이트               |
 
 ---
 
@@ -301,4 +301,4 @@ v0.9.6에서 MCP 커스텀 헤더 템플릿 보간이 수정되었습니다. 이
 5. v0.11.0 UI 재설계에 대비한 CSS 커스터마이징 재검증 테스트
 6. Calendar 기능의 뉴스룸 활용 방안 PoC
 
-*— 끝 —*
+_— 끝 —_
