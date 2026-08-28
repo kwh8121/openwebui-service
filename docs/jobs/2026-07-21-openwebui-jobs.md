@@ -1,6 +1,6 @@
 # Open WebUI Jobs Log — 2026-07-21
 
-> Resume: `claude --resume 4c3bc5d0-fce4-4c2b-9d41-7b8e258c2d0f 
+> Resume: `claude --resume 4c3bc5d0-fce4-4c2b-9d41-7b8e258c2d0f
 
 ## 요약
 
@@ -16,18 +16,18 @@
 - 브랜치: `feature/agents-md-deepinit`
 - 신규 파일 10개 (각 `<!-- Parent: ../AGENTS.md -->` 포함):
 
-| 파일 | 라인 | 크기 |
-| ---- | ---- | ---- |
-| `backend/AGENTS.md` | 53 | 2.5K |
-| `backend/open_webui/AGENTS.md` | 69 | 4.6K |
-| `src/AGENTS.md` | 50 | 2.4K |
-| `src/lib/AGENTS.md` | 63 | 4.1K |
-| `src/routes/AGENTS.md` | 55 | 3.2K |
-| `docs/AGENTS.md` | 50 | 2.3K |
-| `scripts/AGENTS.md` | 40 | 1.8K |
-| `test/AGENTS.md` | 37 | 1.6K |
-| `pipelines/AGENTS.md` | 49 | 2.7K |
-| `.github/AGENTS.md` | 49 | 2.3K |
+| 파일                           | 라인 | 크기 |
+| ------------------------------ | ---- | ---- |
+| `backend/AGENTS.md`            | 53   | 2.5K |
+| `backend/open_webui/AGENTS.md` | 69   | 4.6K |
+| `src/AGENTS.md`                | 50   | 2.4K |
+| `src/lib/AGENTS.md`            | 63   | 4.1K |
+| `src/routes/AGENTS.md`         | 55   | 3.2K |
+| `docs/AGENTS.md`               | 50   | 2.3K |
+| `scripts/AGENTS.md`            | 40   | 1.8K |
+| `test/AGENTS.md`               | 37   | 1.6K |
+| `pipelines/AGENTS.md`          | 49   | 2.7K |
+| `.github/AGENTS.md`            | 49   | 2.3K |
 
 - 루트 `AGENTS.md`는 기존 수동 작성 유지 (미변경)
 - 검증: 부모 참조 11개 모두 유효 / 오르판 없음 / trailing whitespace 0
@@ -67,12 +67,12 @@
 
 ### 5. 최종 CI 통과 및 병합
 
-| Check | Status | Duration |
-| ----- | ------ | -------- |
-| Format & Build | ✅ pass | 3m21s |
-| Ruff Format (3.11) | ✅ pass | 9s |
-| Ruff Format (3.12) | ✅ pass | 14s |
-| Unit Tests | ✅ pass | 37s |
+| Check              | Status  | Duration |
+| ------------------ | ------- | -------- |
+| Format & Build     | ✅ pass | 3m21s    |
+| Ruff Format (3.11) | ✅ pass | 9s       |
+| Ruff Format (3.12) | ✅ pass | 14s      |
+| Unit Tests         | ✅ pass | 37s      |
 
 - `gh pr merge 2 --repo kwh8121/openwebui-service --merge`
 - MERGED at 2026-07-21T06:22:23Z

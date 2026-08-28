@@ -50,11 +50,13 @@
 ## 커밋 / PR
 
 **신규 커밋:**
+
 - `51eb61501` docs: handoff protocol v1.0 + kwh.3/kwh.1 deploy guide + §7 deprecation (3 files, +704/-1)
 - `47080bfe3` merge: feature/docs-deploy-guide-v0.11.0-kwh.1 into integration/v0.11.0
 - `2cd5f2911` Merge pull request #9 from kwh8121/integration/v0.11.0
 
 **PR:**
+
 - **#9** — https://github.com/kwh8121/openwebui-service/pull/9 (merged, --merge)
   - Title: `docs: handoff protocol v1.0 + v0.11.0-kwh.1 deploy guide + kwh-release-routine §7 deprecation`
 
@@ -66,14 +68,14 @@
 
 ## 삭제된 브랜치 (6개)
 
-| 브랜치 | 최종 SHA | 목적 | main 반영 경로 |
-|---|---|---|---|
-| feature/koreatimes-loading-splash | edde6e35b | splash 자산 교체 | PR #7 |
-| feature/local-test-workflow | 05e336b2e | v3 로컬 검증 도구 | PR #7 |
-| feature/local-test-workflow-v4 | f3dd74bd0 | v4 프로덕션 미러 승격 | PR #7 |
-| feature/local-test-workflow-v4.1 | 444a2d180 | cache seed 패치 | PR #7 |
-| feature/local-test-workflow-v4.2 | 23f8a069f | tar exit-1 처리 | PR #7 |
-| feature/docs-deploy-guide-v0.11.0-kwh.1 | 51eb61501 | handoff v1.0 + deploy guide | PR #9 |
+| 브랜치                                  | 최종 SHA  | 목적                        | main 반영 경로 |
+| --------------------------------------- | --------- | --------------------------- | -------------- |
+| feature/koreatimes-loading-splash       | edde6e35b | splash 자산 교체            | PR #7          |
+| feature/local-test-workflow             | 05e336b2e | v3 로컬 검증 도구           | PR #7          |
+| feature/local-test-workflow-v4          | f3dd74bd0 | v4 프로덕션 미러 승격       | PR #7          |
+| feature/local-test-workflow-v4.1        | 444a2d180 | cache seed 패치             | PR #7          |
+| feature/local-test-workflow-v4.2        | 23f8a069f | tar exit-1 처리             | PR #7          |
+| feature/docs-deploy-guide-v0.11.0-kwh.1 | 51eb61501 | handoff v1.0 + deploy guide | PR #9          |
 
 ## 학습 사항
 
@@ -114,6 +116,7 @@ git commit -m "docs: add 2026-07-31 openwebui jobs log"
 ### 시스템 상태 (다음 세션 시작 시 참조)
 
 **저장소 상태:**
+
 - `main` tip = `576558c6c12c493e1e6a6b39d5c0da3e5053aec2`
 - `integration/v0.11.0` = main과 동기 (다음 kwh 사이클 수집점)
 - 프로덕션 이미지 = `ghcr.io/kwh8121/openwebui-service:v0.11.0-kwh.1` (변화 없음)
@@ -121,6 +124,7 @@ git commit -m "docs: add 2026-07-31 openwebui jobs log"
 - 잔존 브랜치: `feature/agents-md-deepinit` (처리 대기), `integration/v0.10.2` (종료 라인, 처리 대기)
 
 **컨트롤 플레인 인프라 (모두 ✅):**
+
 - `production` GitHub Environment (required reviewer `kwh8121`)
 - Self-hosted runner `openwebui-prod-runner` online, labels `[self-hosted, Linux, X64, production]`, systemd active
 - `.github/workflows/deploy-approved-production-release.yaml` (296줄, v1.2 + PR #13 하드닝)
@@ -142,6 +146,7 @@ git commit -m "docs: add 2026-07-31 openwebui jobs log"
 ### Workflow가 자동 강제하는 사항 (Issue evidence 준비 시 필수)
 
 Workflow `deploy-approved-production-release.yaml`는 dispatch 시 다음을 검증하고 미충족 시 배포 거부:
+
 1. Tag 형식 `v<X.Y.Z>-kwh.<N>` (RC/main/latest 불가)
 2. Tag lineage: `gh api compare/<tag>...main` 결과 `identical` 또는 `behind` (main에 없는 태그로 dispatch 불가)
 3. Deploy guide pin: `docs/manual/kwh-deploy-guide-<tag>.md`가 지정 커밋 SHA에 존재
@@ -154,6 +159,7 @@ Workflow `deploy-approved-production-release.yaml`는 dispatch 시 다음을 검
 ### 로컬 dev 에이전트가 다음 릴리스에 제출할 Issue evidence 필드
 
 Issue form `Production deployment request` (라벨 `production-deploy`):
+
 - **Release tag**: `v<X.Y.Z>-kwh.<N>` (main tip에서 tag)
 - **Main tip SHA**: 40자 full SHA
 - **GHCR build Run URL**
@@ -205,6 +211,7 @@ Issue form `Production deployment request` (라벨 `production-deploy`):
 ### 이번 세션 처리 이력
 
 **PR 흐름 (integration-only, doc shortcut 없음):**
+
 - PR #10: handoff v1.0 → v1.1 (broken ref fix + Prerequisites + templates + hierarchy + versioning)
 - PR #11: handoff v1.2 (deploy workflow + Issue form 신설)
 - PR #12: workflow 하드닝 (integration/v0.11.0)
@@ -213,6 +220,7 @@ Issue form `Production deployment request` (라벨 `production-deploy`):
 - PR #15: 러너 등록 완료 반영 → main
 
 **검증 완료 커밋:**
+
 - `ba31d0fc8` 하드닝 원본 (배포 에이전트 작업)
 - `59f94594e` 러너 상태 문서화
 - `576558c6c` main tip (PR #15 머지)
