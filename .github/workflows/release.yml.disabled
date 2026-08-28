@@ -1,4 +1,5 @@
 # ─────────────────────────────────────────────────────────────────────────────
+# Disabled in the kwh fork: releases are built only from immutable v*-kwh.* tags.
 # Release — Create GitHub release from CHANGELOG, trigger Docker builds
 # Runs on pushes to main when package.json version changes
 # ─────────────────────────────────────────────────────────────────────────────
