@@ -31,16 +31,16 @@
 
 Adopted 2026-08-11. Each information type has one canonical home; other tools carry a link or short summary, never a duplicate.
 
-| 정보 유형 | 원본 위치 | 다른 도구에는 어떻게 둘 것인가 |
-| --------- | --------- | ------------------------------- |
-| 계획안, 검증 요청, 상태 전이 (in-flight) | Linear | jobs log에는 결과 요약만 |
-| **확정된 개발·리뷰 계획 (approved plans)** | **`docs/plan/`** | **Linear 이슈는 유지하고 `create_attachment`로 `docs/plan/<file>.md` 링크만 (승격 후에도 stage 3~4 포인터로 사용)** |
-| 세션에서 실제로 한 일 | jobs log (`docs/jobs/YYYY-MM-DD-openwebui-jobs.md`) | OpenViking이 watch로 자동 인제스션 |
-| 코드 변경, 브랜치, PR, 태그 | Git / GitHub | Linear·jobs log에는 링크와 요약만 |
-| 배포 승인·결과 evidence | GitHub Issue | Linear에는 `create_attachment` 링크만 |
-| **upstream Open WebUI 버전·기능 참고자료** | **`docs/references/`** | **jobs log에는 참조 링크만. mem0에는 넣지 않음** |
-| 장기 학습, 반복 실수, 운영 원칙 | jobs log → OpenViking | mem0에는 넣지 않음 (참고 캐시로 남을 수 있음) |
-| 개인 선호, 답변 스타일, 일반 습관 | mem0 | 프로젝트 문서에는 넣지 않음 |
+| 정보 유형                                  | 원본 위치                                           | 다른 도구에는 어떻게 둘 것인가                                                                                      |
+| ------------------------------------------ | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| 계획안, 검증 요청, 상태 전이 (in-flight)   | Linear                                              | jobs log에는 결과 요약만                                                                                            |
+| **확정된 개발·리뷰 계획 (approved plans)** | **`docs/plan/`**                                    | **Linear 이슈는 유지하고 `create_attachment`로 `docs/plan/<file>.md` 링크만 (승격 후에도 stage 3~4 포인터로 사용)** |
+| 세션에서 실제로 한 일                      | jobs log (`docs/jobs/YYYY-MM-DD-openwebui-jobs.md`) | OpenViking이 watch로 자동 인제스션                                                                                  |
+| 코드 변경, 브랜치, PR, 태그                | Git / GitHub                                        | Linear·jobs log에는 링크와 요약만                                                                                   |
+| 배포 승인·결과 evidence                    | GitHub Issue                                        | Linear에는 `create_attachment` 링크만                                                                               |
+| **upstream Open WebUI 버전·기능 참고자료** | **`docs/references/`**                              | **jobs log에는 참조 링크만. mem0에는 넣지 않음**                                                                    |
+| 장기 학습, 반복 실수, 운영 원칙            | jobs log → OpenViking                               | mem0에는 넣지 않음 (참고 캐시로 남을 수 있음)                                                                       |
+| 개인 선호, 답변 스타일, 일반 습관          | mem0                                                | 프로젝트 문서에는 넣지 않음                                                                                         |
 
 **4-도구 역할 요약:**
 
@@ -73,13 +73,13 @@ Full lifecycle for any change destined for production. Stages 1–4 use Linear (
 
 **Label vocabulary** (workspace-level, created 2026-08-11):
 
-| Label | Color | Meaning |
-| ----- | ----- | ------- |
-| `plan-draft` | gray | Planner is still writing the plan |
-| `needs-review` | yellow | Plan complete, awaits plan verifier |
-| `plan-approved` | teal | Plan verified, ready for dev pickup |
-| `verify-request` | orange | Dev complete, awaits dev verifier |
-| `verify-passed` | green | Dev verified, ready for deployment handoff to GitHub |
+| Label            | Color  | Meaning                                              |
+| ---------------- | ------ | ---------------------------------------------------- |
+| `plan-draft`     | gray   | Planner is still writing the plan                    |
+| `needs-review`   | yellow | Plan complete, awaits plan verifier                  |
+| `plan-approved`  | teal   | Plan verified, ready for dev pickup                  |
+| `verify-request` | orange | Dev complete, awaits dev verifier                    |
+| `verify-passed`  | green  | Dev verified, ready for deployment handoff to GitHub |
 
 **Rationale**: Stages 1–2 (planning + plan verification) gain the most from Linear's hierarchical issue model and comment-based review — text-only planning misses design gaps that comment threads catch. Deployment stays on GitHub because the opencode production agent contract is stable and changing it would risk regression. Validated in the 2026-08-11 scenario-B walkthrough (see `docs/jobs/2026-08-11-openwebui-jobs.md`), where the verifier caught a Bootstrap paradox in the runner health monitoring plan that the planner had missed.
 

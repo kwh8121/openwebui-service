@@ -42,11 +42,13 @@
 ## 커밋 / PR
 
 **신규 커밋:**
+
 - `05e336b2e` feat(local-test): add WSL2 local pre-deploy verification workflow (feature/local-test-workflow)
 - `773b52667` merge: feature/koreatimes-loading-splash into integration/v0.10.2
 - `702ad5bd5` merge: feature/local-test-workflow into integration/v0.10.2
 
 **참조 (이전 세션):**
+
 - `edde6e35b` assets: update Koreatimes loading splash images (feature/koreatimes-loading-splash)
 
 **PR:** 이 세션에서는 생성 안 함. 다음 단계는 RC 태그 → GH Actions RC 빌드 → 스테이징 검증 → PR `integration/v0.10.2` → `main`.

@@ -13,6 +13,7 @@
 사용자가 개발↔검증 에이전트 인계 표면으로 **Linear 이슈 기반 시나리오 B**를 선택. Linear 실사용 경험 및 효용성 평가를 겸해 단계별 테스트 진행 예정.
 
 **시나리오 B 개요**:
+
 - 개발 에이전트: `save_issue`로 "검증 요청" 이슈 생성 (feature 브랜치·커밋 SHA 포함)
 - 검증 에이전트: `list_issues --label "verify-request"`로 pickup → 결과를 `save_comment`로 회신
 - Linear가 assignee/status/label로 인계 상태 자동 추적

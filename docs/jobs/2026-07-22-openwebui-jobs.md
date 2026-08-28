@@ -150,16 +150,19 @@ git commit -m "docs: add 2026-07-22 openwebui jobs log"
 ### 커밋 / PR
 
 **PR 히스토리 (전부 머지됨):**
+
 - #3 Merge integration/v0.10.2 (kwh.2) — merge commit `42681f0e9`
 - #4 docs: correct GHCR image tag examples — merge commit `f39ad5842`
 - #5 docs: kwh release routine + AGENTS.md pointer + CLAUDE.md — merge commit `3286bb0ab`
 - #6 docs(CLAUDE): inline production release routine summary — merge commit `18e754ed1`
 
 **태그:**
+
 - `v0.10.2-kwh.2-rc.1` at `87f41b9f6` — RC (스테이징 검증 통과)
 - `v0.10.2-kwh.2` at `42681f0e9` — 최종 (GHCR 이미지 준비, 프로덕션 배포 대기)
 
 **주요 커밋 (전부 main 히스토리에 포함):**
+
 - `171e0f742` assets: Koreatimes brand (12 파일 × 2 디렉토리)
 - `4cbd9a061` fix: remove forced (Open WebUI) suffix from WEBUI_NAME
 - `51ab6e210` docs: correct GHCR image tag examples

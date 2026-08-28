@@ -59,12 +59,14 @@
 ## 커밋 / PR
 
 **커밋 (2026-07-29 밤 ~ 2026-07-30 오전):**
+
 - `f3dd74bd0` feat(local-test): v4 promote to release gate, prod-mirror + data preservation
 - `5bc81840e` merge: feature/local-test-workflow-v4 into integration/v0.10.2
 - `444a2d180` fix(local-test): v4.1 seed baked-in model cache on first run
 - `170566c23` merge: feature/local-test-workflow-v4.1 into integration/v0.10.2
 
 **태그:**
+
 - `v0.10.2-kwh.3-rc.2` at `5bc81840e` — GHCR run `30433693789`, 6분 41초 성공
 
 **PR:** 이번 세션에서 생성 안 함. 다음 단계로 통합 후 PR → main 예정.
