@@ -1,3 +1,4 @@
+# Disabled in the kwh fork: this repository does not publish the upstream package to PyPI.
 name: Release to PyPI
 
 on:

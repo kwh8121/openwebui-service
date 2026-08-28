@@ -5,7 +5,7 @@
 
 ## Purpose
 
-GitHub-specific repo configuration: CI/CD workflows, issue and PR templates, Dependabot config, and funding metadata. The active CI covers backend format checks, frontend build/format/i18n checks, Docker image builds, and PyPI + GHCR release publishing. Files with a `.disabled` suffix under `workflows/` are intentionally inert — do not rename them to `.yml`/`.yaml` without an explicit decision.
+GitHub-specific repo configuration: CI/CD workflows, issue and PR templates, Dependabot config, and funding metadata. The active CI covers backend format checks, frontend build/format/i18n checks, and tag-based GHCR image publishing. Files with a `.disabled` suffix under `workflows/` are intentionally inert — do not rename them to `.yml`/`.yaml` without an explicit decision.
 
 ## Key Files
 
@@ -17,10 +17,10 @@ GitHub-specific repo configuration: CI/CD workflows, issue and PR templates, Dep
 
 ## Subdirectories
 
-| Directory         | Purpose                                                                                                                              |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `ISSUE_TEMPLATE/` | Structured issue forms for bug reports, feature requests, etc.                                                                       |
-| `workflows/`      | GitHub Actions workflows — `backend.yaml`, `frontend.yaml`, `docker.yaml`, `release.yml`, `release-pypi.yml`, plus disabled variants |
+| Directory         | Purpose                                                                                                                   |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `ISSUE_TEMPLATE/` | Structured issue forms for bug reports, feature requests, etc.                                                            |
+| `workflows/`      | GitHub Actions workflows — active `backend.yaml`, `frontend.yaml`, `docker.yaml`, plus disabled upstream release variants |
 
 ## For AI Agents
 
