@@ -276,7 +276,7 @@ Browser checks required after deployment: OAuth, real model chat, upload/RAG, br
 - **2026-07-31 (v1.2)**:
   - `.github/workflows/deploy-approved-production-release.yaml` 신설 (PR #11) 후 하드닝 (PR #12) → main 승격 (PR #13). `workflow_dispatch` 입력(`tag`, `issue_number`, `guide_commit`) + `environment: production` (required reviewer 게이트 자동 발동) + `runs-on: [self-hosted, production]`. 실행 순서: 검증 → dispatched 코멘트 → 현재 이미지 캡처 → pull → WAL-safe 백업 → checkpoint 코멘트 → 새 이미지 up → health/version/manifest/Pipelines API 검증 → 로그 스캔 → success/failure 코멘트 자동 게시. **PR #12 하드닝으로 추가된 검증 항목 (미충족 시 dispatch 거부)**:
     1. **Tag format**: `^v[0-9]+\.[0-9]+\.[0-9]+-kwh\.[0-9]+$` 정규식 강제 (RC·`main`·`latest` 거부).
-    2. **Tag lineage**: `gh api compare/<tag>...main` → `identical` 또는 `behind`만 허용 (main 계보 밖 tag dispatch 불가).
+    2. **Tag lineage**: `gh api compare/<tag>...main` → `identical` 또는 `ahead`만 허용 (tag가 main과 같거나 main의 조상이어야 하며, main 계보 밖 tag는 dispatch 불가).
     3. **Deploy guide pin**: `docs/manual/kwh-deploy-guide-<tag>.md`가 `guide_commit` SHA에 GitHub Contents API로 존재 확인.
     4. **Deploy environment**: `COMPOSE_FILE`, `ENV_FILE`, `DATA_DIR`, `DATA_DIR/webui.db` 존재 사전 확인.
     5. **Backup 스코프**: `tar -C ${DEPLOY_DIR} openwebui -C /app pipelines` (openwebui + pipelines 통합, WAL-safe stop 후 실행).
