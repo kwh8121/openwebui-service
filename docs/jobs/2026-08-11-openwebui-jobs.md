@@ -21,12 +21,14 @@
 ### Phase 2 — 5단계 워크플로우 설계
 
 **결정**: 계획 + 계획 검증 단계에서 Linear 사용 실익이 있으므로 채택. 단, 아래 조건 준수:
+
 1. jobs log는 여전히 진실 소스 유지 (Linear는 계획·검토 대화용, jobs log는 감사·세션 재개용). 이관하지 말고 양립.
 2. 개발 단계부터는 git이 진실 소스. Linear 이슈는 "어떤 계획 항목을 작업 중"이라는 포인터 역할만.
 3. 배포는 GitHub Issue 유지 (opencode 프로덕션 에이전트 계약 불변).
 4. Linear ↔ GitHub 브리지는 `create_attachment`로 얇게.
 
 **5단계**:
+
 ```
 [1] 계획 (Linear)      Project + Parent + Sub-issues, label: plan-draft
 [2] 계획 검증 (Linear) label: needs-review ↔ plan-approved (or plan-draft for revision)
@@ -38,14 +40,17 @@
 ### Phase 3 — 실전 시연 (테스트 재료 = handoff v1.3 "러너 health 자동화")
 
 **Step A** — 라벨 5개 생성 (workspace-level):
+
 - `plan-draft` (gray), `needs-review` (yellow), `plan-approved` (teal), `verify-request` (orange), `verify-passed` (green)
 - 색상 톤을 stage 흐름에 맞게 (초기 회색 → 승인 녹색)
 
 **Step B** — Project `openwebui v0.11.1` 생성:
+
 - Lead: 곽원희, Icon: Rocket, Priority: Medium, Status: Backlog
 - Description에 5단계 boundaries + label workflow 명시
 
 **Step C** — 계획 이슈 4개 생성 (Planner 시뮬레이션):
+
 - KOR-5 Parent: "Runner health monitoring automation" (label: plan-draft → needs-review)
 - KOR-6 Sub 1: "Design heartbeat check protocol"
 - KOR-7 Sub 2: "Implement heartbeat scheduled workflow" (blocked by KOR-6)
@@ -53,6 +58,7 @@
 - 각 이슈에 목표·비목표·산출물·검증 기준·의존성 명시. `gitBranchName` 필드 자동 생성 확인.
 
 **Step D** — 계획 검증 시뮬레이션 (Verifier 역할, 저 자신이 역할 분리 수행):
+
 - Pickup: `list_issues --label needs-review` → KOR-5 확인
 - 실측 검증:
   - 참조 문서 `docs/manual/github-control-plane-local-agent-handoff.ko.md` 실존 확인 (grep 2 matches)
@@ -83,12 +89,12 @@
 
 ### 각 이슈 verdict
 
-| 이슈 | Verdict |
-|------|---------|
+| 이슈  | Verdict                                            |
+| ----- | -------------------------------------------------- |
 | KOR-5 | NEEDS REVISION (CRITICAL: watchdog sub-issue 필요) |
-| KOR-6 | NEEDS MINOR REVISION (timeout·cron 스펙) |
-| KOR-7 | NEEDS REVISION (workflow 분리) |
-| KOR-8 | APPROVED WITH CHANGES (재사용 구조) |
+| KOR-6 | NEEDS MINOR REVISION (timeout·cron 스펙)           |
+| KOR-7 | NEEDS REVISION (workflow 분리)                     |
+| KOR-8 | APPROVED WITH CHANGES (재사용 구조)                |
 
 **상태 전이**: KOR-5 라벨 `needs-review` → `plan-draft` 반환 (revision 요청).
 
@@ -96,24 +102,24 @@
 
 ### 잘한 것
 
-| 요소 | 관찰 |
-|------|------|
-| 계층 구조 | Parent-Sub-issue UI 자동. jobs log의 flat markdown 대비 명확 |
-| 의존성 시각화 | Blocked by 관계가 UI에 표시. 개발 pickup 시 순서 판단 자연스러움 |
-| 라벨 상태 머신 | 5-라벨 전이가 워크플로우 신호 역할 수행. 라벨 변경만으로 다음 단계 트리거 |
+| 요소               | 관찰                                                                          |
+| ------------------ | ----------------------------------------------------------------------------- |
+| 계층 구조          | Parent-Sub-issue UI 자동. jobs log의 flat markdown 대비 명확                  |
+| 의존성 시각화      | Blocked by 관계가 UI에 표시. 개발 pickup 시 순서 판단 자연스러움              |
+| 라벨 상태 머신     | 5-라벨 전이가 워크플로우 신호 역할 수행. 라벨 변경만으로 다음 단계 트리거     |
 | 코멘트 = 감사 추적 | 4개 이슈에 verifier의 상세 발견 영구 기록. 다음 revision 사이클에서 참조 가능 |
-| `gitBranchName` | planning 단계부터 개발 브랜치명 예고. 팀 규약 강제 효과 |
-| MCP 도구 성숙도 | 첫 시도에 모두 성공. 스키마 명확, 오류 없음 |
+| `gitBranchName`    | planning 단계부터 개발 브랜치명 예고. 팀 규약 강제 효과                       |
+| MCP 도구 성숙도    | 첫 시도에 모두 성공. 스키마 명확, 오류 없음                                   |
 
 ### 마찰
 
-| 요소 | 관찰 |
-|------|------|
-| 초기 셋업 비용 | 라벨 5 + Project 1 = 6번 API 호출. idempotent bootstrap 스크립트 필요 |
-| status ≠ label | Linear status(Backlog/Todo/Done)와 workflow label 병존. 매핑 여부 나중 결정 |
-| Blocked 상태 필터링 부재 | `list_issues --label`로는 blocked 여부 안 나옴. 개발 pickup 시 "실제 시작 가능" 판단 로직 별도 필요 |
-| 이중 관리 | Linear 코멘트 + jobs log 병존 → 어느 것이 진실 소스인지 관습화 필요 |
-| 워크스페이스 vs 팀 스코프 | 라벨을 workspace로 만들었으나 팀별 정책 다르면 재정리 |
+| 요소                      | 관찰                                                                                                |
+| ------------------------- | --------------------------------------------------------------------------------------------------- |
+| 초기 셋업 비용            | 라벨 5 + Project 1 = 6번 API 호출. idempotent bootstrap 스크립트 필요                               |
+| status ≠ label            | Linear status(Backlog/Todo/Done)와 workflow label 병존. 매핑 여부 나중 결정                         |
+| Blocked 상태 필터링 부재  | `list_issues --label`로는 blocked 여부 안 나옴. 개발 pickup 시 "실제 시작 가능" 판단 로직 별도 필요 |
+| 이중 관리                 | Linear 코멘트 + jobs log 병존 → 어느 것이 진실 소스인지 관습화 필요                                 |
+| 워크스페이스 vs 팀 스코프 | 라벨을 workspace로 만들었으나 팀별 정책 다르면 재정리                                               |
 
 ### 실효 판정
 
@@ -127,6 +133,7 @@
 ### 유지된 이슈들 (테스트 → 실제 계획으로 승격)
 
 KOR-5~8을 삭제하지 않고 실제 v0.11.1 사이클 계획 재료로 유지. Bootstrap paradox 반영해 revision 필요:
+
 1. KOR-5에 watchdog 관련 sub-issue 추가 (신설 KOR-9 예상)
 2. KOR-7 스코프를 self-hosted heartbeat만으로 축소
 3. KOR-8을 재사용 alerting composite action으로 재정의
@@ -141,11 +148,13 @@ AGENTS.md, CLAUDE.md에 5단계 워크플로우 명문화. feature 브랜치 `fe
 ## 커밋 / PR
 
 **이 세션에서 발생한 Linear 아티팩트** (커밋 대상 아님):
+
 - Labels: plan-draft, needs-review, plan-approved, verify-request, verify-passed
 - Project: openwebui v0.11.1
 - Issues: KOR-5, KOR-6, KOR-7, KOR-8 + 4개 verification comment
 
 **커밋 예정** (다음 스텝):
+
 - AGENTS.md, CLAUDE.md 5단계 명문화
 
 ## 학습 사항
