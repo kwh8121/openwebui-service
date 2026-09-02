@@ -4,7 +4,7 @@
 
 ## 요약
 
-upstream v0.11.3 통합 사이클을 5-stage 워크플로로 **Stage 1~4 완료 + Stage 5 준비 완료**. 계획 수립 → 계획 검증(1라운드 REVISION-REQUESTED → 2라운드 PLAN-APPROVED) → 로컬 병합(충돌 2건 해소) → 정적 검증 → RC 태그·게이트 PASS → PR #29 main 병합 → 최종 태그 `v0.11.3-kwh.1` 빌드·게이트 PASS → 배포 가이드 작성. `main` @ `af4f111d1`, package.json `0.11.3`. **프로덕션 미배포** — 배포 요청 Issue 제출이 남았다.
+upstream v0.11.3 통합 사이클을 5-stage 워크플로로 **Stage 1~4 완료 + Stage 5 준비 완료**. 계획 수립 → 계획 검증(1라운드 REVISION-REQUESTED → 2라운드 PLAN-APPROVED) → 로컬 병합(충돌 2건 해소) → 정적 검증 → RC 태그·게이트 PASS → PR #29 main 병합 → 최종 태그 `v0.11.3-kwh.1` 빌드·게이트 PASS → 배포 가이드 작성. `main` @ `af4f111d1`, package.json `0.11.3`. **배포 요청 Issue #31 제출 완료** — opencode 프로덕션 에이전트 실행 대기.
 
 진행 중 **세션마다 같은 문제를 재발견하는 근본 원인**이 "이 개발 박스의 환경 계약 부재"임을 확인하고, 권위 문서 4종을 한글화하면서 현행 워크플로와 모순되는 내용을 정리해 하네스로 고정했다.
 
@@ -237,28 +237,70 @@ Guide Template"의 **표준 11섹션 스펙**(표준 인스턴스 `kwh-deploy-gu
 `127.0.0.1:8082`다. 검증 실패 시 **도구 탓으로 단정하기 전에 `docker port`로 실제 매핑을
 먼저 확인**한다.
 
+## Stage 5 핸드오프 — 프로덕션 배포 요청 제출
+
+### PR #30 병합
+
+문서 전용 PR(`integration/v0.11.3 → main`). CI 양쪽 통과 후 `--merge` 병합.
+
+| 항목             | 값                                         |
+| ---------------- | ------------------------------------------ |
+| Format & Build   | pass (3m36s)                               |
+| Unit Tests       | pass (43s)                                 |
+| 병합 후 main tip | `4898b2e681aafb60497c00842ec97e5407ba9693` |
+
+배포 가이드가 해당 커밋에 존재함을 **배포 워크플로가 쓰는 것과 같은 GitHub Contents API 경로**로 확인했다 (`docs/manual/kwh-deploy-guide-v0.11.3-kwh.1.md`, 24,574 bytes). 워크플로의 "Deploy guide pin" 검증이 통과할 조건을 사전에 충족시킨 것이다.
+
+feature 브랜치는 로컬·원격 모두 삭제.
+
+### 배포 요청 Issue #31 제출
+
+https://github.com/kwh8121/openwebui-service/issues/31 (라벨 `production-deploy`)
+
+Protocol v1.2 §"배포 요청 계약"의 10개 필수 필드를 모두 채웠다.
+
+| 필드          | 값                                                              |
+| ------------- | --------------------------------------------------------------- |
+| Release tag   | `v0.11.3-kwh.1`                                                 |
+| Main tip SHA  | `af4f111d140a2ae9ccd02643f5bbc45ea3742e11`                      |
+| Build Run     | 33588400126                                                     |
+| Image digest  | `sha256:5a08d0a9…c403b3` (amd64 `sha256:20445c5a…66bb6`)        |
+| Deploy guide  | `docs/manual/kwh-deploy-guide-v0.11.3-kwh.1.md` at `4898b2e68…` |
+| Rollback tag  | `v0.11.1-kwh.2`                                                 |
+| dispatch 입력 | `check_pipelines=true`                                          |
+
+`check_pipelines=true`는 프로덕션 pipelines 컨테이너 기동 상태를 관리자가 확인한 뒤 확정했다. 로컬 에이전트는 프로덕션 상태를 조회할 권한이 없으므로 이 항목은 관리자 확인이 필수 선행 조건이다.
+
+**증적을 숨기지 않았다**: 게이트 스크립트가 `[FAIL]`을 낸 사실과 그 원인(도구 결함, KOR-23), 수동 확인으로 판정했다는 절차를 Issue 본문에 명시했다. 통과 결과만 적고 오판정을 생략하면 프로덕션 에이전트가 게이트 신뢰도를 오판할 수 있다.
+
+### Linear 연결
+
+- KOR-14 / KOR-21에 Issue #31 URL을 attachment로 연결 (`create_attachment`는 base64 업로드 전용이라 `save_issue`의 `links` 필드 사용)
+- KOR-21 라벨 `verify-passed` 전이
+- KOR-14에 Stage 1~5 전체 진행 요약을 한글로 기록
+
+### 로컬 테스트 환경 정리
+
+`docker compose -f docker-compose.local-test.yaml down`. 데이터는 bind mount(`~/openwebui-local-test-data`)라 보존되며, 상태는 alembic `d4c1a8e37b62` / chat 4 / user 3 / model 369 — **다음 사이클의 baseline**이다. v0.11.1 사이클처럼 게이트를 건너뛰면 baseline이 뒤처지므로, 다음 릴리스에서도 게이트를 실행해 이 상태를 유지한다.
+
+정리 시 `OPENWEBUI_LOCAL_TEST_TAG` 미설정으로 compose 보간이 실패했다. 이는 §8.1에서 로그 캡처 결함의 원인으로 **잘못 지목했던** 바로 그 현상이며, 실제로는 조사자 셸에서만 발생하는 별개 문제임이 이번에 재확인됐다.
+
 ## 다음 세션 재개 지점
 
-**현재 상태**: `main` @ `af4f111d1`, 최종 태그 `v0.11.3-kwh.1` 발행·빌드·로컬 게이트 PASS 완료.
-배포 가이드 작성 완료. **프로덕션 미배포.**
-작업 브랜치: `feature/docs-v0.11.3-deploy-guide` (배포 가이드 + 계획서 §8.2/§9/§10/§11/§12 갱신).
+**현재 상태**: `main` @ `4898b2e68`. 최종 태그 `v0.11.3-kwh.1` 발행·빌드·로컬 게이트 2회 PASS.
+배포 가이드 main 승격 완료. **배포 요청 Issue #31 제출 완료 — opencode 프로덕션 에이전트 실행 대기.**
 
 **다음 작업 순서**:
 
-1. `feature/docs-v0.11.3-deploy-guide` → `integration/v0.11.3` `--no-ff` 병합 → push → PR → `main`.
-2. **프로덕션 pipelines 컨테이너 기동 확인** — `check_pipelines=true` 사전 조건 (가이드 §3.6).
-   중지 상태면 dispatch가 실패 판정된다.
-3. `Production deployment request` Issue 제출 (Protocol v1.2 §"배포 요청 계약"). 필수 필드:
-   최종 태그, 40자 SHA `af4f111d140a2ae9ccd02643f5bbc45ea3742e11`, build run `33588400126`,
-   digest, 가이드 경로 + main 커밋 SHA, 로컬 게이트 2회 PASS, 마이그레이션 0건,
-   fork carryover 검증 결과, 롤백 태그 `v0.11.1-kwh.2`.
-4. Linear KOR-14에 배포 Issue URL을 `create_attachment`로 연결하고 `verify-passed` 유지.
-5. 배포 후 가이드 §7.5 검색 지연 관찰 결과를 jobs log에 기록.
+1. Issue #31에 프로덕션 에이전트의 dispatch/성공 코멘트가 달렸는지 확인.
+   - 성공 시: 관리자 브라우저 acceptance(가이드 §7) 수행 → 결과를 Issue에 기록 → KOR-14를 done으로 전이.
+   - **§7.5 검색 지연**(SQLite LIKE UDF)은 프로덕션 데이터 규모에서 처음 검증되는 항목이므로 반드시 확인하고 결과를 jobs log에 남긴다.
+   - 실패 시: **동일 태그를 재빌드·덮어쓰지 않는다**(immutable). 가이드 §8.1 이미지 롤백(스키마 변경 0건이라 이것만으로 완전 복구) 후 원인 조사 → `v0.11.3-kwh.2`로 재시작.
+2. 배포 결과를 jobs log에 append.
 
 **릴리스와 독립된 잔여 과제**:
 
-- **KOR-23** (High) — `scripts/local-test.sh` 결함 3종: health 타임아웃 60→600초 + 플래그,
-  로그 캡처 타이밍(거짓 음성), 마이그레이션 자동 assertion 부재. 다음 사이클 전 처리 권장.
+- **KOR-23** (High) — `scripts/local-test.sh` 결함 3종: ① health 타임아웃 60초 하드코딩(실측 520초 필요, 최소 600초 + `--health-timeout` 플래그), ② `up -d` 직후 대기 없이 로그를 캡처해 검사가 항상 통과하는 거짓 음성, ③ 마이그레이션 자동 assertion 부재. 다음 사이클 전 처리 권장.
 
 ## 사용자 노트
 
