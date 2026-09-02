@@ -10,6 +10,7 @@
 #
 # Usage:
 #   ./scripts/local-test.sh <image-tag> [--fresh] [--no-backup] [--allow-rc] [--reseed-cache]
+#                                       [--health-timeout SECONDS]
 #   ./scripts/local-test.sh --down
 #   ./scripts/local-test.sh --list-backups
 #   ./scripts/local-test.sh --restore <timestamp>
@@ -22,6 +23,11 @@
 #   --reseed-cache   Force re-copy of baked-in model cache from the image (use when
 #                    a new release ships new bundled models; otherwise seeds once
 #                    on first run and reuses thereafter).
+#   --health-timeout SECONDS
+#                    Seconds to wait for /health to return 200 (default: 600).
+#                    Boot loads PyTorch (~2GB); on a memory-constrained host with
+#                    accumulated data this measured 520s, so the previous hardcoded
+#                    60s produced false [FAIL] verdicts. Raise further on slow disks.
 #   --down           Stop and remove containers (bind-mount data dirs are kept)
 #   --list-backups   Print backup history and exit
 #   --restore <ts>   Restore data + pipelines dirs from a backup timestamp
@@ -38,6 +44,7 @@
 #   BACKUP_MIN_BYTES                minimum backup archive size in bytes for tar
 #                                   exit=1 to be treated as a non-fatal warning
 #                                   (default: 1048576 = 1 MiB)
+#   HEALTH_TIMEOUT_SECONDS          same as --health-timeout (flag wins)
 
 set -euo pipefail
 
@@ -65,6 +72,8 @@ RESEED_CACHE=0
 RESTORE_TS=""
 KEEP=5
 YES=0
+HEALTH_TIMEOUT="${HEALTH_TIMEOUT_SECONDS:-600}"
+HEALTH_POLL_INTERVAL=5
 
 usage() {
   awk 'NR>1 { if ($0 ~ /^#/) { sub(/^# ?/, ""); print } else { exit } }' "${BASH_SOURCE[0]}"
@@ -95,6 +104,11 @@ while [[ $# -gt 0 ]]; do
       KEEP="$1"
       ;;
     --yes)           YES=1 ;;
+    --health-timeout)
+      shift
+      [[ $# -eq 0 ]] && { echo "ERROR: --health-timeout requires a number of seconds" >&2; exit 2; }
+      HEALTH_TIMEOUT="$1"
+      ;;
     -h|--help)       usage ;;
     -*)
       echo "ERROR: unknown flag: $1" >&2
@@ -521,7 +535,17 @@ export_compose_vars
 echo "Starting compose (openwebui on 127.0.0.1:${PORT}, pipelines on 127.0.0.1:${PIPELINES_PORT})..."
 docker compose -f "$COMPOSE_FILE" up -d
 
-# --- Quadruple success check --------------------------------------------
+# --- Success checks -----------------------------------------------------
+#
+# ORDER MATTERS. Until KOR-23 this block ran:
+#   up -d → check_state → capture logs → grep → poll /health
+# The log capture happened immediately after `up -d`, so the application had
+# not printed anything yet, LOG_OUT was empty, and the error grep ALWAYS
+# passed — a false negative that could never catch a boot failure.
+#
+# The order below waits for /health first, so the logs actually contain the
+# boot sequence by the time they are scanned.
+
 FAIL=0
 
 check_state() {
@@ -535,41 +559,119 @@ check_state() {
   fi
 }
 
-check_state openwebui
-check_state pipelines
-
-echo "--- openwebui last 100 log lines ---"
-LOG_OUT="$(docker compose -f "$COMPOSE_FILE" logs --tail 100 openwebui 2>&1 || true)"
-echo "$LOG_OUT"
-echo "--- end logs ---"
-if grep -Eiq 'Traceback|ERROR|Failed to start' <<<"$LOG_OUT"; then
-  echo "ERROR: startup error keywords detected in openwebui logs" >&2
-  FAIL=1
-fi
-
+# --- 1. Wait for /health (app boots + Alembic runs during this window) ---
 HEALTH_URL="http://127.0.0.1:${PORT}/health"
 HEALTHY=0
-echo "Polling ${HEALTH_URL} (up to 60s)..."
-for _ in 1 2 3 4 5 6 7 8 9 10 11 12; do
+BOOT_SECONDS=0
+echo "Polling ${HEALTH_URL} (up to ${HEALTH_TIMEOUT}s, interval ${HEALTH_POLL_INTERVAL}s)..."
+health_start="$(date +%s)"
+health_deadline=$(( health_start + HEALTH_TIMEOUT ))
+while (( $(date +%s) < health_deadline )); do
   if curl -sf --max-time 3 "$HEALTH_URL" >/dev/null 2>&1; then
     HEALTHY=1
     break
   fi
-  sleep 5
+  # Fail fast if the container died instead of burning the whole timeout.
+  ow_state="$(docker compose -f "$COMPOSE_FILE" ps openwebui --format '{{.State}}' 2>/dev/null || true)"
+  if [[ -n "$ow_state" && "$ow_state" != "running" && "$ow_state" != "restarting" ]]; then
+    echo "ERROR: openwebui state became '${ow_state}' while waiting for /health" >&2
+    break
+  fi
+  sleep "$HEALTH_POLL_INTERVAL"
 done
+BOOT_SECONDS=$(( $(date +%s) - health_start ))
+
 if [[ $HEALTHY -eq 1 ]]; then
-  echo "OK: openwebui /health returned 200"
+  echo "OK: openwebui /health returned 200 after ${BOOT_SECONDS}s"
 else
-  echo "ERROR: openwebui /health did not return 200 within 60s" >&2
+  echo "ERROR: openwebui /health did not return 200 within ${HEALTH_TIMEOUT}s" >&2
+  echo "HINT: boot loads PyTorch (~2GB). On a memory-constrained host this is slow;" >&2
+  echo "      re-run with --health-timeout <larger> before concluding the image is broken." >&2
   FAIL=1
 fi
 
-# Pipelines sanity: HTTP response any (its root returns 200 OK JSON).
-PIPE_URL="http://127.0.0.1:${PIPELINES_PORT}/"
-if curl -sf --max-time 3 "$PIPE_URL" >/dev/null 2>&1; then
-  echo "OK: pipelines root reachable at ${PIPE_URL}"
+# --- 2. Container states -------------------------------------------------
+check_state openwebui
+check_state pipelines
+
+# --- 3. Startup logs (now non-empty: /health has been reached) -----------
+echo "--- openwebui last 200 log lines ---"
+LOG_OUT="$(docker compose -f "$COMPOSE_FILE" logs --tail 200 openwebui 2>&1 || true)"
+echo "$LOG_OUT"
+echo "--- end logs ---"
+
+if [[ -z "${LOG_OUT//[[:space:]]/}" ]]; then
+  # Empty logs after a successful boot are themselves suspicious; the old
+  # code silently treated this as a pass.
+  echo "ERROR: openwebui produced no log output — cannot verify startup" >&2
+  FAIL=1
 else
-  echo "WARN: pipelines root not reachable at ${PIPE_URL} (may be normal during boot)" >&2
+  # Fatal patterns are kept in sync with the production deploy workflow
+  # (.github/workflows/deploy-approved-production-release.yaml). A bare
+  # case-insensitive 'ERROR' is deliberately NOT fatal here: it matches
+  # benign lines and would flip the old false negative into a false positive.
+  if grep -Eiq 'Traceback|Failed to start|sqlalchemy\.exc' <<<"$LOG_OUT"; then
+    echo "ERROR: startup failure keywords detected in openwebui logs" >&2
+    FAIL=1
+  fi
+  err_lines="$(grep -Eic '(^|[^A-Za-z])ERROR([^A-Za-z]|$)' <<<"$LOG_OUT" || true)"
+  if [[ "${err_lines:-0}" -gt 0 ]]; then
+    echo "WARN: ${err_lines} log line(s) contain 'ERROR' — review manually (not fatal)" >&2
+  fi
+fi
+
+# --- 4. Migration / DB assertions (KOR-23) ------------------------------
+# The gate previously reported nothing about migrations, so a half-applied
+# schema could pass. These run only when the app is up.
+MIGRATION_SUMMARY="not checked"
+if [[ $HEALTHY -eq 1 ]]; then
+  upgrade_count="$(grep -c 'Running upgrade' <<<"$LOG_OUT" || true)"
+  echo "Alembic 'Running upgrade' lines this boot: ${upgrade_count:-0}"
+
+  db_in_container="/app/backend/data/webui.db"
+
+  # alembic current == heads → detects a half-applied schema.
+  # WEBUI_SECRET_KEY is required by the CLI entrypoint; a throwaway value is
+  # passed to this short-lived introspection process only. It does not touch
+  # the running app or the persisted key file.
+  alembic_out="$(docker compose -f "$COMPOSE_FILE" exec -T \
+      -e "DATABASE_URL=sqlite:///${db_in_container}" \
+      -e WEBUI_SECRET_KEY=local-test-alembic-introspection \
+      openwebui sh -c 'cd /app/backend/open_webui && alembic current 2>/dev/null | grep -v "^INFO" | tr -d "\r"; echo "--"; alembic heads 2>/dev/null | grep -v "^INFO" | tr -d "\r"' 2>/dev/null || true)"
+  cur_rev="$(sed -n '1p' <<<"$alembic_out" | awk '{print $1}')"
+  head_rev="$(sed -n '3p' <<<"$alembic_out" | awk '{print $1}')"
+
+  if [[ -z "$cur_rev" || -z "$head_rev" ]]; then
+    echo "WARN: could not read alembic current/heads — verify manually" >&2
+    MIGRATION_SUMMARY="unreadable (upgrades this boot: ${upgrade_count:-0})"
+  elif [[ "$cur_rev" == "$head_rev" ]]; then
+    echo "OK: alembic current == heads (${cur_rev})"
+    MIGRATION_SUMMARY="head=${cur_rev}, upgrades this boot: ${upgrade_count:-0}"
+  else
+    echo "ERROR: alembic current (${cur_rev}) != heads (${head_rev}) — schema is half-applied" >&2
+    echo "HINT: do NOT cut a new tag. Investigate the DB first (see plan §3.1-a, upstream #29280)." >&2
+    FAIL=1
+    MIGRATION_SUMMARY="MISMATCH current=${cur_rev} heads=${head_rev}"
+  fi
+
+  # SQLite integrity.
+  integrity="$(docker compose -f "$COMPOSE_FILE" exec -T openwebui \
+      python3 -c "import sqlite3;print(sqlite3.connect('${db_in_container}').execute('PRAGMA integrity_check').fetchone()[0])" 2>/dev/null | tr -d '\r' || true)"
+  if [[ "$integrity" == "ok" ]]; then
+    echo "OK: SQLite PRAGMA integrity_check = ok"
+  else
+    echo "ERROR: SQLite integrity_check returned '${integrity:-<unreadable>}'" >&2
+    FAIL=1
+  fi
+fi
+
+# --- 5. Pipelines sanity -------------------------------------------------
+# /openapi.json is what the production deploy workflow checks, so mirror it.
+PIPE_URL="http://127.0.0.1:${PIPELINES_PORT}/openapi.json"
+if curl -sf --max-time 3 "$PIPE_URL" >/dev/null 2>&1; then
+  echo "OK: pipelines reachable at ${PIPE_URL}"
+else
+  echo "WARN: pipelines not reachable at ${PIPE_URL} (may be normal during boot)" >&2
 fi
 
 # --- Report -------------------------------------------------------------
@@ -578,6 +680,8 @@ if [[ $FAIL -eq 0 ]]; then
 
 ===============================================================
 [PASS] automated checks OK for ${FULL_IMAGE}
+Boot time: ${BOOT_SECONDS}s to /health 200
+Migration: ${MIGRATION_SUMMARY}
 Open:      http://127.0.0.1:${PORT}
 Pipelines: http://127.0.0.1:${PIPELINES_PORT}
 Now walk the browser prod-mirror checklist
@@ -591,6 +695,13 @@ else
 
 ===============================================================
 [FAIL] one or more automated checks failed for ${FULL_IMAGE}
+Boot time: ${BOOT_SECONDS}s (timeout was ${HEALTH_TIMEOUT}s)
+Migration: ${MIGRATION_SUMMARY}
+
+If the only failure is the /health timeout, this is very likely a slow host,
+not a broken image — re-run with a larger --health-timeout before concluding
+the release is defective. Never re-tag or rebuild an immutable tag to "fix" it.
+
 Inspect logs:
   docker compose -f docker-compose.local-test.yaml logs openwebui
   docker compose -f docker-compose.local-test.yaml logs pipelines
