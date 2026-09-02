@@ -4,7 +4,7 @@
 
 ## 요약
 
-upstream v0.11.3 통합 사이클을 5-stage 워크플로로 **Stage 1~4 완료 + Stage 5 준비 완료**. 계획 수립 → 계획 검증(1라운드 REVISION-REQUESTED → 2라운드 PLAN-APPROVED) → 로컬 병합(충돌 2건 해소) → 정적 검증 → RC 태그·게이트 PASS → PR #29 main 병합 → 최종 태그 `v0.11.3-kwh.1` 빌드·게이트 PASS → 배포 가이드 작성. `main` @ `af4f111d1`, package.json `0.11.3`. **프로덕션 배포 성공** (run 33615303045, Issue #31 CLOSED). 세션 하네스도 고정했다 — 게이트 오판정과 도구 함정을 상시 컨텍스트로 승격(152→184줄)하고 병합 완료 브랜치 29개를 정리했다.
+upstream v0.11.3 통합 사이클을 5-stage 워크플로로 **Stage 1~4 완료 + Stage 5 준비 완료**. 계획 수립 → 계획 검증(1라운드 REVISION-REQUESTED → 2라운드 PLAN-APPROVED) → 로컬 병합(충돌 2건 해소) → 정적 검증 → RC 태그·게이트 PASS → PR #29 main 병합 → 최종 태그 `v0.11.3-kwh.1` 빌드·게이트 PASS → 배포 가이드 작성. `main` @ `af4f111d1`, package.json `0.11.3`. **프로덕션 배포 성공** (run 33615303045, Issue #31 CLOSED). 세션 하네스도 정비했다 — 도구 함정을 상시 컨텍스트로 승격하고, 병합 완료 브랜치 30개를 정리했으며, **게이트 스크립트 결함 3종(KOR-23)을 실제로 수정**해 양성·음성 양쪽으로 검증했다.
 
 진행 중 **세션마다 같은 문제를 재발견하는 근본 원인**이 "이 개발 박스의 환경 계약 부재"임을 확인하고, 권위 문서 4종을 한글화하면서 현행 워크플로와 모순되는 내용을 정리해 하네스로 고정했다.
 
@@ -393,17 +393,90 @@ deferred pipelines 작업을 전용 트래커로 분리해 #31 종료 후에도 
 
 릴리스별 가이드는 검증 불가능한 프로덕션 상태를 **단정하지 말고**, "dispatch 직전 확인 → 결과에 따라 `true`/`false` 선택 + 근거를 Issue에 기록"이라는 **분기 절차**로 기술해야 한다. 그러면 상태가 달라도 편차가 아니라 정상 경로가 된다.
 
+## KOR-23 — 게이트 스크립트 결함 3종 수정 (PR #36)
+
+`scripts/local-test.sh`가 정상 이미지에 `[FAIL]`을 내면서 **동시에 기동 실패는 절대 잡지 못하던** 결함을 고쳤다. `main` @ `10f3c5d64`.
+
+### ① `/health` 타임아웃 60초 → 600초 + `--health-timeout`
+
+고정 12회 반복(`sleep 5` × 12)을 deadline 루프로 교체했다.
+
+- 폴링 중 컨테이너가 죽으면 타임아웃을 다 쓰지 않고 즉시 중단
+- 도달 소요 시간을 리포트에 출력 → 다음 사이클 타임아웃 산정 근거로 축적
+- `HEALTH_TIMEOUT_SECONDS` 환경변수도 지원 (플래그 우선)
+
+### ② 로그 검사 무효화 — 거짓 음성
+
+`up -d` 직후 대기 없이 로그를 캡처해 `LOG_OUT`이 비고 검사가 항상 통과하던 문제. **검사 순서를 재배열**했다: `/health` 도달 대기 → 컨테이너 state → 로그 스캔 → DB assertion. 로그가 비어 있으면 그 자체를 실패로 판정한다.
+
+**패턴도 함께 고쳐야 했다.** 기존 `Traceback|ERROR|Failed to start`를 두고 타이밍만 고치면 거짓 음성이 **거짓 양성으로 바뀐다.** 실행 검증에서 정상 부팅 로그에 `ERROR` 2줄이 실제로 나왔다:
+
+```
+ERROR | Could not fetch tool server spec from http://fastapi-tools-v2:8000/openapi.json
+        Cannot connect to host ... [Temporary failure in name resolution]
+ERROR | Failed to connect to http://fastapi-tools-v2:8000 OpenAPI tool server
+```
+
+`fastapi-tools-v2`는 프로덕션 전용 툴 서버라 로컬 compose에 없다 — 로컬에서는 정상 로그다. 치명 패턴을 **프로덕션 배포 워크플로와 동일한** `Traceback|Failed to start|sqlalchemy\.exc`로 맞추고, 단독 `ERROR`는 WARN으로만 보고한다.
+
+> 이건 **결함 하나만 고치면 다른 결함이 드러나는 사례**다. 타이밍 수정이 패턴 결함을 활성화시킨다. 고치기 전에는 로그가 비어 있어 패턴이 무엇이든 무해했다.
+
+### ③ 마이그레이션 자동 assertion 추가
+
+half-applied 스키마가 통과할 수 있던 공백을 메웠다.
+
+- `Running upgrade` 라인 수 보고
+- **`alembic current == heads` 비교** — 불일치 시 FAIL + "새 태그를 만들지 말고 DB를 먼저 조사하라" 안내 (upstream #29280 대비)
+- `PRAGMA integrity_check = ok`
+
+pipelines 검사도 `/` → `/openapi.json`으로 바꿔 프로덕션 배포 워크플로가 실제로 검사하는 엔드포인트와 일치시켰다.
+
+### 검증 — 양성·음성 양쪽
+
+통과만 확인하면 "항상 통과"와 구분되지 않는다. 이 스크립트는 애초에 **실패 감지 능력이 검증된 적이 없었다**(결함 ②).
+
+| 실행                        | 결과                                                                                        |
+| --------------------------- | ------------------------------------------------------------------------------------------- |
+| `v0.11.3-kwh.1 --no-backup` | **[PASS] exit 0** — boot 121s, head `d4c1a8e37b62`, upgrades 0, integrity ok, pipelines 200 |
+| `--health-timeout 30`       | **[FAIL] exit 1** — 새 안내 출력, Migration은 unhealthy 시 "not checked"로 올바르게 건너뜀  |
+
+데이터 보존: alembic `d4c1a8e37b62`, chat 4 / user 3 / model 369.
+
+### 부수 확인 — 지연 원인 실측 확정
+
+`--no-backup`으로 844MB tar를 건너뛰니 기동이 **121초**다(520초가 아님). 지연 원인이 **백업 tar의 페이지 캐시 포화**였다는 진단이 실측으로 확인됐다. 기본 600초는 두 경우를 모두 커버한다.
+
+### 하네스 문서 — 조건부 절을 실제로 제거
+
+PR #33에서 `AGENTS.md`에 "**KOR-23 완료 시 이 절을 삭제하십시오**"라고 명시해둔 조건을 이행했다. 결함이 고쳐졌으므로 "`[FAIL]`을 이미지 결함으로 해석하지 말라"는 우회 지침은 유효하지 않고, 남겨두면 이제는 **실제 실패를 무시하게 만든다.**
+
+여전히 참인 운영 사실만 남겼다 — 기동 시간(백업 포함 520s / `--no-backup` 121s), `--health-timeout` 사용법, immutable 태그 재빌드 금지.
+
+상시 컨텍스트: 184줄/27.0KB → **171줄/25.9KB**
+
+`docs/plan/local-test-workflow.md` §9 성공 조건 절도 v4.3으로 갱신했다.
+
+### 학습 — 조건부 문서화가 실제로 작동했다
+
+PR #33에서 임시 우회 지침을 넣을 때 삭제 조건을 **본문에 명시**해뒀고, KOR-23 완료 시점에 그것을 근거로 제거했다. 조건 없이 넣었다면 결함 수정 후에도 남아 반대 방향의 오판을 유발했을 것이다. **임시 지침은 넣을 때 소멸 조건을 함께 쓴다.**
+
+### 관찰 — 범위 밖으로 남긴 것
+
+로컬 게이트 부팅 로그에 `Generating new WEBUI_SECRET_KEY...`가 나온다. 프로덕션 배포 가이드 §6은 이 라인을 **중단 조건**으로 규정한다(bind mount 파손 신호). 로컬 테스트 환경에서는 자체 데이터 디렉터리를 쓰므로 성격이 다르지만, 게이트가 "프로덕션 미러"를 표방하는 이상 검사 대상 후보다. KOR-23 스코프(결함 3종)를 넘어서므로 이번에는 넣지 않았다.
+
 ## 다음 세션 재개 지점
 
-**현재 상태**: v0.11.3 사이클 **완결**. `main` @ `dd9254ed8`. 프로덕션에 `v0.11.3-kwh.1` 배포 성공, Issue #31 CLOSED. 작업트리 clean, feature 브랜치 0개.
+**현재 상태**: v0.11.3 사이클 완결 + 하네스 정비 완료. `main` @ `10f3c5d64`. 프로덕션 `v0.11.3-kwh.1` 가동 중. 작업트리 clean, feature 브랜치 0개.
 
-**열린 작업**:
+**열린 작업 2건**:
 
-1. **Issue #34** (OPEN) — Pipelines 안전 재기동 + `utils/middleware.py`(+163) / `routers/pipelines.py`(+6) 프로덕션 회귀 검증. 이번 배포에서 `SKIPPED`로 남은 유일한 미검증 범위다. 별도 요청 Issue + `production` Environment 승인 필요.
-2. **KOR-23** (High) — `scripts/local-test.sh` 결함 3종: ① health 타임아웃 60초(실측 520초 필요, 최소 600초 + `--health-timeout`), ② `up -d` 직후 로그 캡처로 검사가 항상 통과하는 거짓 음성, ③ 마이그레이션 자동 assertion 부재. **완료 시 `AGENTS.md` §"로컬 게이트 스크립트는 `[FAIL]`을 냅니다" 절을 삭제할 것** (본문에도 명시됨).
-3. **가이드 템플릿 개선 (권고, 미착수)** — 릴리스별 배포 가이드가 검증 불가능한 프로덕션 상태를 단정하지 않도록, 사전조건을 분기 절차로 기술하는 규칙을 handoff 문서 §"Per-Release Deploy Guide Template"에 추가. 근거는 위 §"학습 — 배포 가이드의 사전조건 기술 방식".
+1. **GitHub #34** (OPEN) — Pipelines 안전 재기동 + `utils/middleware.py`(+163) / `routers/pipelines.py`(+6) 프로덕션 회귀 검증. 이번 배포에서 `SKIPPED`로 남은 유일한 미검증 범위다. 별도 요청 Issue + `production` Environment 승인 필요.
+2. **KOR-24** (Medium) — 배포 가이드 템플릿 개선. 릴리스별 가이드가 검증 불가능한 프로덕션 상태(컨테이너 기동 여부, PersistentConfig 실효값)를 단정하지 않고 **분기 절차**로 기술하도록 handoff §"Per-Release Deploy Guide Template" 개정. 이번 `check_pipelines` 편차의 근본 원인.
 
-**다음 upstream 사이클 시작 시**: 로컬 테스트 데이터는 `~/openwebui-local-test-data`에 alembic `d4c1a8e37b62` / chat 4 / user 3 / model 369로 보존돼 있다. v0.11.1 사이클처럼 게이트를 건너뛰면 baseline이 뒤처지므로 매 사이클 게이트를 실행해 이 상태를 유지한다.
+**다음 upstream 사이클 시작 시**:
+
+- 로컬 테스트 데이터는 `~/openwebui-local-test-data`에 alembic `d4c1a8e37b62` / chat 4 / user 3 / model 369로 보존. v0.11.1 사이클처럼 게이트를 건너뛰면 baseline이 뒤처지므로 매 사이클 실행해 유지한다.
+- 게이트는 이제 신뢰할 수 있다(KOR-23 수정 + 양성·음성 검증 완료). `[FAIL]`이 나오면 실제 실패로 취급하되, **타임아웃만 실패한 경우**는 `--health-timeout`을 늘려 재실행 후 판단한다.
 
 ## 사용자 노트
 
