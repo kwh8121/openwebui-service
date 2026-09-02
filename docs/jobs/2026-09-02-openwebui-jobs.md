@@ -4,7 +4,7 @@
 
 ## 요약
 
-upstream v0.11.3 통합 사이클을 5-stage 워크플로로 **Stage 1~3까지 완료**. 계획 수립 → 계획 검증(1라운드 REVISION-REQUESTED → 2라운드 PLAN-APPROVED) → 로컬 병합(충돌 2건 해소) → 정적 검증. `integration/v0.11.3` @ `1db7a2cba`, package.json `0.11.3`. **아직 push하지 않음.**
+upstream v0.11.3 통합 사이클을 5-stage 워크플로로 **Stage 1~4 완료 + Stage 5 준비 완료**. 계획 수립 → 계획 검증(1라운드 REVISION-REQUESTED → 2라운드 PLAN-APPROVED) → 로컬 병합(충돌 2건 해소) → 정적 검증 → RC 태그·게이트 PASS → PR #29 main 병합 → 최종 태그 `v0.11.3-kwh.1` 빌드·게이트 PASS → 배포 가이드 작성. `main` @ `af4f111d1`, package.json `0.11.3`. **프로덕션 미배포** — 배포 요청 Issue 제출이 남았다.
 
 진행 중 **세션마다 같은 문제를 재발견하는 근본 원인**이 "이 개발 박스의 환경 계약 부재"임을 확인하고, 권위 문서 4종을 한글화하면서 현행 워크플로와 모순되는 내용을 정리해 하네스로 고정했다.
 
@@ -138,24 +138,127 @@ feature 브랜치: `feature/docs-plan-v0.11.3-integration`, `feature/upstream-me
 - KOR-14 라벨 전이: `plan-draft` → `needs-review` → `plan-approved`.
 - **Linear 기록을 한글로 전환** (사용자 지시). 기존 영문 코멘트 2건은 이력으로 유지.
 
+## 릴리스 실행 (같은 날 후속 — RC → main → 최종 태그 → 배포 가이드)
+
+계획서 §12 "다음 세션" 항목을 같은 날 전부 실행했다.
+
+### 실행 순서와 결과
+
+| 단계                                 | 결과                                                                         |
+| ------------------------------------ | ---------------------------------------------------------------------------- |
+| push `integration/v0.11.3` + feature | 완료                                                                         |
+| RC 태그 `v0.11.3-kwh.1-rc.1`         | GH Actions run `33582427125` success (8분 41초)                              |
+| RC 로컬 게이트                       | **PASS** — 마이그레이션 3건 정상 실행, 브라우저 체크리스트 사용자 수행 PASS  |
+| PR #29 `integration/v0.11.3 → main`  | `--merge` 병합, main tip `af4f111d1`                                         |
+| 최종 태그 `v0.11.3-kwh.1`            | GH Actions run `33588400126` success                                         |
+| 최종 태그 로컬 게이트                | **PASS** — 자동 검증 전 항목 통과                                            |
+| 배포 가이드                          | `docs/manual/kwh-deploy-guide-v0.11.3-kwh.1.md` 작성 완료 (표준 11섹션 스펙) |
+
+### 릴리스 아티팩트
+
+- main tip: `af4f111d140a2ae9ccd02643f5bbc45ea3742e11`
+- 이미지: `ghcr.io/kwh8121/openwebui-service:v0.11.3-kwh.1`
+- OCI index digest: `sha256:5a08d0a9a7a3ea22134e84f8a5d9b950654103aa3f60bcdcb60f72a1d5c403b3`
+- linux/amd64 digest: `sha256:20445c5a562910c7900c8f6b2e15645e7f1a90fc3754b026e2ebdaad55966bb6`
+- parity 태그 `git-af4f111` 동일 digest 확인
+- 롤백 대상: `ghcr.io/kwh8121/openwebui-service:v0.11.1-kwh.2`
+
+### 핵심 발견 — 프로덕션 마이그레이션은 완전 no-op
+
+```
+git diff --name-status v0.11.1-kwh.2 v0.11.3-kwh.1 -- backend/open_webui/migrations/versions/
+→ (출력 없음)
+```
+
+`v0.11.1-kwh.2` → `v0.11.3-kwh.1` 사이 마이그레이션 파일 변화가 **0건**이고, 프로덕션은
+`v0.11.1-kwh.1` 배포 이후 이미 `d4c1a8e37b62`(= v0.11.3 head)다. 세션 내내 최대 리스크로
+추적하던 `#29280`(마이그레이션 실패 시 `raise`)은 **실행할 마이그레이션이 없어 도달 지점이
+없다**. 계획서 §10에서 해소 처리했다.
+
+역으로 프로덕션 기동 로그에 `Running upgrade`가 출현하면 프로덕션 revision이 전제와 다르다는
+뜻이므로, 배포 가이드 §6에 **즉시 중단 조건**으로 명문화했다.
+
+한편 로컬 게이트는 `f0bd01a18a3d` → `d4c1a8e37b62`로 3건을 실제 실행하는 **더 긴 경로**를
+예외 없이 통과했다. 정확한 프로덕션 미러는 아니지만 통과 조건이 더 엄격하다.
+
+### 게이트 스크립트 오판정 3회 연속 — KOR-23 정량 근거 확보
+
+최종 태그 게이트에서도 `scripts/local-test.sh`가 `[FAIL]`을 냈다. 이번에는 기동 시간을 측정했다.
+
+| 항목                          | 값                                     |
+| ----------------------------- | -------------------------------------- |
+| 컨테이너 기동 → `/health` 200 | **520초**                              |
+| 스크립트 하드코딩 타임아웃    | 60초 (`scripts/local-test.sh:552-563`) |
+| 배포 workflow 타임아웃 (참고) | 300초 (`HEALTH_TIMEOUT_SECONDS`)       |
+
+지연 원인은 **로컬 머신의 디스크 I/O 병목**이며 이미지 결함이 아니다. PID 1이
+`State: D (disk sleep)` / `wchan: __wait_on_buffer` 상태로, fd 3이
+`torch/utils/__pycache__/_foreach_utils.cpython-311.pyc`에 열려 있었다. 호스트는
+free 123MB / buff/cache 3.3GB — 게이트가 직전에 쓴 ~844MB 백업 tar가 페이지 캐시를 채운
+직후 PyTorch(~2GB)를 로드하며 정체됐다. 외부 네트워크 연결은 없었다(다운로드 아님).
+RC 게이트 때는 메모리 여유가 있어 1분 내 healthy에 도달했다.
+
+→ KOR-23의 타임아웃은 최소 600초 + `--health-timeout` 플래그로 잡아야 한다.
+
+### 배포 가이드 설계 결정
+
+`kwh-deploy-guide-v0.11.1-kwh.2.md`(9섹션 축약형)가 아니라 handoff §"Per-Release Deploy
+Guide Template"의 **표준 11섹션 스펙**(표준 인스턴스 `kwh-deploy-guide-v0.11.0-kwh.1.md`)을
+따랐다. kwh.2는 `users.py`-only 핫픽스였지만 이번은 185 파일 / +6866-4501 규모의 upstream
+2개 릴리스 통합이라 전체 사전조건·롤백·스모크 절차가 필요하다.
+
+릴리스 특화 반영:
+
+- §2에 마이그레이션 0건 명시 + `Running upgrade` 출현 시 즉시 중단 조건
+- §3.6 pipelines 기동 사전 확인 신설 — `check_pipelines=true`가 실제로 검사하는 엔드포인트는
+  `http://localhost:9099/openapi.json`이다 (워크플로 `:229`에서 확인). 중지 상태로 dispatch하면
+  배포가 실패 판정된다
+- §6에 로컬 520초 기동 사실과 원인을 기록해, 프로덕션에서 300초 초과 시 이미지 결함으로
+  단정하지 말고 자원 상태를 먼저 조사하도록 안내
+- §8.1을 기본 복구 경로로 승격 — 스키마 변경 0건이라 이미지 롤백만으로 완전 복구
+- §7.5에 SQLite LIKE UDF 검색 정확도·지연을 version-specific spot check로 배치
+
+### 열린 확인 사항 해소
+
+이전 섹션의 "미해결 확인 사항" 3건이 모두 정리됐다.
+
+| 항목                      | 결과                                                                                               |
+| ------------------------- | -------------------------------------------------------------------------------------------------- |
+| `ENABLE_IMAGE_GENERATION` | 프로덕션 env 미설정. PersistentConfig이나 게이트에서 실효값 `false` 확인 → 이미지 생성 스모크 생략 |
+| `ENABLE_DB_MIGRATIONS`    | 미설정 = 기본 `True` → 마이그레이션 경로 진입. 단 실행 대상 0건이라 무해                           |
+| pipelines 기동            | 로컬 게이트에서 확인. **프로덕션은 배포 요청 전 재확인 필요** (가이드 §3.6)                        |
+
+### 추가 학습 — `rtk` 훅 재발
+
+`curl`이 `rtk` 훅에 가로채여 `000`을 반환하는 현상이 재발했다(프리티어 때와 동일 패턴).
+게이트 수동 검증 시에는 `/usr/bin/curl` 절대 경로를 사용한다.
+
+또한 로컬 테스트 포트를 `3001`로 잘못 기억해 전 엔드포인트가 `000`으로 나왔다. 실제는
+`127.0.0.1:8082`다. 검증 실패 시 **도구 탓으로 단정하기 전에 `docker port`로 실제 매핑을
+먼저 확인**한다.
+
 ## 다음 세션 재개 지점
 
-**현재 상태**: `integration/v0.11.3` @ `1db7a2cba` — Stage 3 완료, **push 안 됨**. Stage 4 미진입 (KOR-14 라벨 `plan-approved` 유지).
+**현재 상태**: `main` @ `af4f111d1`, 최종 태그 `v0.11.3-kwh.1` 발행·빌드·로컬 게이트 PASS 완료.
+배포 가이드 작성 완료. **프로덕션 미배포.**
+작업 브랜치: `feature/docs-v0.11.3-deploy-guide` (배포 가이드 + 계획서 §8.2/§9/§10/§11/§12 갱신).
 
 **다음 작업 순서**:
 
-1. ~~**선행 — KOR-22 조사**~~ → **완료. 오탐이었고 블로커 아님** (§"정정" 참조). 바로 2번부터 진행.
-2. `integration/v0.11.3` + feature 브랜치 push → Stage 4 진입 (`verify-request`, PR 첨부, verifier diff 리뷰 → `verify-passed`).
-3. RC 태그 `v0.11.3-kwh.1-rc.1` → GH Actions 빌드 → `./scripts/local-test.sh v0.11.3-kwh.1-rc.1 --allow-rc` (계획서 §8.1, 브라우저 체크리스트 §8.3 — **SQLite LIKE UDF 검색 항목 포함**).
-4. PR `integration/v0.11.3 → main` → `--merge` 병합.
-5. 최종 태그 `v0.11.3-kwh.1` → GH Actions 빌드 → 로컬 게이트 재실행 (§8.2).
-6. `docs/manual/kwh-deploy-guide-v0.11.3-kwh.1.md` 작성 (**`check_pipelines=true` 필수**) → GitHub 배포 Issue 핸드오프.
+1. `feature/docs-v0.11.3-deploy-guide` → `integration/v0.11.3` `--no-ff` 병합 → push → PR → `main`.
+2. **프로덕션 pipelines 컨테이너 기동 확인** — `check_pipelines=true` 사전 조건 (가이드 §3.6).
+   중지 상태면 dispatch가 실패 판정된다.
+3. `Production deployment request` Issue 제출 (Protocol v1.2 §"배포 요청 계약"). 필수 필드:
+   최종 태그, 40자 SHA `af4f111d140a2ae9ccd02643f5bbc45ea3742e11`, build run `33588400126`,
+   digest, 가이드 경로 + main 커밋 SHA, 로컬 게이트 2회 PASS, 마이그레이션 0건,
+   fork carryover 검증 결과, 롤백 태그 `v0.11.1-kwh.2`.
+4. Linear KOR-14에 배포 Issue URL을 `create_attachment`로 연결하고 `verify-passed` 유지.
+5. 배포 후 가이드 §7.5 검색 지연 관찰 결과를 jobs log에 기록.
 
-**미해결 확인 사항** (KOR-21 사전 조건):
+**릴리스와 독립된 잔여 과제**:
 
-- 프로덕션 `.env.openwebui.oauth`에 `ENABLE_IMAGE_GENERATION` 설정 여부 (§3.3 `routers/images.py` 검증 범위 결정)
-- 프로덕션 `ENABLE_DB_MIGRATIONS=false` 운영 여부 (§3.1-a `#29280` 도달 가능성)
-- 배포 시점 pipelines 컨테이너 기동 여부
+- **KOR-23** (High) — `scripts/local-test.sh` 결함 3종: health 타임아웃 60→600초 + 플래그,
+  로그 캡처 타이밍(거짓 음성), 마이그레이션 자동 assertion 부재. 다음 사이클 전 처리 권장.
 
 ## 사용자 노트
 
