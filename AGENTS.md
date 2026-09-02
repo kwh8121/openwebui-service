@@ -21,7 +21,9 @@
 - **Node**: nvm에 Node 22와 Node 24가 있고 기본 PATH는 Node 24를 가리킵니다. 프로젝트는 engine-strict `<=22.x`이므로 **먼저 `nvm use 22`**를 실행합니다. Node 24에서는 `npm ci`와 스크립트가 실패합니다.
 - **ruff**: 기본 설치돼 있지 않습니다. `npm run format:backend` 또는 `ruff format --check` 전에 `pip install ruff`가 필요합니다.
 - **프론트엔드 프로덕션 빌드는 로컬에서 실행하지 않습니다.** `npm run build`(vite)는 이 7 GB 머신에서 heap OOM으로 실패합니다. **GitHub Actions의 GHCR 이미지 빌드**(`v*-kwh.*` 태그 트리거)가 유일한 빌드 권위이며, `scripts/local-test.sh`가 그 빌드 결과 이미지를 검증합니다. push 전 로컬 검증은 **정적 검사만** 수행합니다: `npm run check`(svelte-check), `npm run test:frontend`, `npm run i18n:parse`, `ruff format --check`, `npx prettier --check <files>`.
-- **`npm run format`은 현재 동작하지 않습니다.** Prettier 3에서 `--plugin-search-dir` 플래그가 제거됐고 `.prettierrc`의 `pluginSearchDirs`도 deprecated입니다. 스크립트와 설정이 고쳐질 때까지 `npx prettier --write` / `--check`를 직접 사용합니다 (별도 과제로 추적).
+- **`npm run format`은 정상 동작합니다** (2026-09-02 `main`·`integration` 양쪽 재확인, CI도 green). `--plugin-search-dir` 플래그와 `.prettierrc`의 `pluginSearchDirs`는 Prettier 2 잔재로 Prettier 3가 **경고만 내고 무시**합니다(`[warn] Ignored unknown option`). 동작에 문제 없으며 정리는 선택적 housekeeping입니다.
+- **npm 스크립트를 동시 실행하지 마십시오.** `npm run check` / `npm run build`를 백그라운드로 돌리면서 `npm run format`을 실행했을 때 `Cannot find package 'prettier-plugin-svelte'` 오류가 한 번 발생했습니다(재현 불가). node_modules 동시 접근으로 보이므로 순차 실행합니다.
+- **`npm run test:frontend`는 로컬에서 watch 모드로 뜹니다.** 스크립트가 `vitest --passWithNoTests`로 `run` 서브커맨드가 없어 종료되지 않습니다. CI는 non-TTY라 단발 실행되지만, 로컬에서는 `npx vitest run --passWithNoTests`를 사용합니다.
 - **svelte-check 베이스라인**: `npm run check`는 upstream에서 물려받은 기존 오류 약 7,800건을 보고합니다. 병합이 깨끗하다는 기준은 총합이 0인 것이 아니라, **병합이 건드린 파일에 신규 오류가 0건**인 것입니다.
 
 ## 검증 및 포매팅
