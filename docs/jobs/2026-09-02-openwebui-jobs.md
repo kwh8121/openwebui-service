@@ -74,7 +74,7 @@ upstream v0.11.3 통합 사이클을 5-stage 워크플로로 **Stage 1~3까지 �
 
 **추가 — 재발 방지 하네스**
 
-- `AGENTS.md` §"로컬 환경 제약" 신설: `nvm use 22` 필수 · `pip install ruff` · **로컬 `npm run build` 금지** · `npm run format` Prettier 3 비호환 · svelte-check 베이스라인 약 7,800건.
+- `AGENTS.md` §"로컬 환경 제약" 신설: `nvm use 22` 필수 · `pip install ruff` · **로컬 `npm run build` 금지** · npm 스크립트 순차 실행 · `npm run test:frontend` watch 모드 주의 · svelte-check 베이스라인 약 7,800건. (초판에 있던 "`npm run format` 파손" 항목은 같은 날 오탐으로 확인되어 제거 — 아래 §"정정" 참조)
 - `CLAUDE.md` 상단에 동일 제약 요약 (조회 없이 매 세션 컨텍스트 유지).
 
 ### 6. 계획서 v3 — 로컬 빌드 제외
@@ -105,16 +105,36 @@ feature 브랜치: `feature/docs-plan-v0.11.3-integration`, `feature/upstream-me
 
 - **파일 트리 비교 ≠ 내용 비교**: `git ls-tree --name-only` 결과가 같아도 내용은 다를 수 있다. 마이그레이션·설정 디렉터리 비교 시 반드시 `git diff --stat <ref1> <ref2> -- <path>`를 쓸 것. 이번에 `internal/db.py` +40줄(SQLite LIKE UDF)을 놓쳐 CRITICAL 지적을 받았다.
 - **rtk 프록시가 `prettier --check` 결과를 stale 캐시로 반환**: 실제로는 실패인데 "All files formatted correctly"를 반환. `npx prettier --version`도 같은 문자열을 반환해 캐시 오염이 확인됨. 포맷 검증은 `./node_modules/.bin/prettier`를 직접 호출할 것.
-- **환경 계약 부재가 세션 드리프트의 근본 원인**: 세션마다 Node 24/engine-strict 충돌 · ruff 미설치 · 빌드 OOM · `npm run format` 파손을 밑바닥부터 재발견했다. `AGENTS.md` §"로컬 환경 제약"으로 고정.
-- **`npm run format`이 Prettier 3에서 파손**: `--plugin-search-dir` 플래그가 Prettier 3.0에서 제거됐고 `.prettierrc`의 `pluginSearchDirs`도 deprecated. CI가 이 스크립트를 clean-tree 게이트로 쓰므로 PR CI 실패 가능 → **KOR-22**로 분리.
+- **환경 계약 부재가 세션 드리프트의 근본 원인**: 세션마다 Node 24/engine-strict 충돌 · ruff 미설치 · 빌드 OOM을 밑바닥부터 재발견했다. `AGENTS.md` §"로컬 환경 제약"으로 고정.
+- ~~**`npm run format`이 Prettier 3에서 파손**~~ → **정정: 오탐이었음** (같은 날 KOR-22 조사에서 확인, 아래 §"정정" 참조). `--plugin-search-dir` / `pluginSearchDirs`는 Prettier 3가 **경고만 내고 무시**하며 스크립트는 정상 동작한다.
+- **진짜 교훈은 "동시 실행 금지"였다**: 위 오류(`Cannot find package 'prettier-plugin-svelte'`)는 `npm run check`와 `npm run build`를 백그라운드로 돌리는 중에 `npm run format`을 실행했을 때 한 번 발생했고 재현되지 않았다. npm 스크립트는 순차 실행할 것.
+- **한 번 본 오류를 재현 없이 "파손"으로 단정하고 권위 문서에 기록한 것이 실수**: `AGENTS.md`에 거짓 제약이 들어갔고, 하네스가 막으려던 바로 그 오염을 스스로 만들었다. 환경 제약을 문서에 박기 전에 **최소 2회 재현 + 다른 브랜치/CI 대조**를 거칠 것.
 - **`npm run test:frontend`는 로컬에서 watch 모드로 뜬다**: 스크립트가 `vitest --passWithNoTests` (run 서브커맨드 없음). CI는 non-TTY라 단발 실행되지만 로컬에선 종료되지 않는다. 로컬에선 `npx vitest run --passWithNoTests`를 쓸 것.
 - **계획 검증은 "계획 vs CI"뿐 아니라 "계획 vs 실제 머신"도 봐야 한다**: §7.4가 `npm run build`를 명시했고 verifier도 CI 정합성만 확인해 통과시켰으나, 실제로는 머신이 못 하는 작업이었다.
 - **`pkill -f <패턴>`이 자기 셸을 죽인다**: 명령줄에 패턴 문자열이 포함되면 자기 자신도 매칭된다. 프로세스 정리 시 패턴을 변수로 쪼개거나 PID로 지정할 것.
 
+## 정정 (같은 날 후속 — KOR-22 조사 결과)
+
+**초판에 기록한 "`npm run format`이 Prettier 3에서 파손"은 오탐이었습니다.**
+
+검증 내역:
+
+| 검증 항목                                                       | 결과                                                                 |
+| --------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `npm run format` on `integration/v0.11.3`                       | 정상 (전 파일 처리, 트리 clean)                                      |
+| `npm run format` on `main`                                      | 정상                                                                 |
+| CI 게이트 순서 `format` → `i18n:parse` → `git diff --exit-code` | clean 통과                                                           |
+| GH Actions `frontend.yaml` 최근 8회 실행                        | 전부 success (최신: `main` @ 2026-08-31)                             |
+| `--plugin-search-dir` / `pluginSearchDirs`                      | Prettier 3가 `[warn] Ignored unknown option`으로 **무시**. 에러 아님 |
+
+- 최초 관측된 `Cannot find package 'prettier-plugin-svelte'` 오류는 `npm run check`와 `npm run build`를 백그라운드로 동시 실행하던 시점에 **1회** 발생했고 재현되지 않았습니다. node_modules 동시 접근에 의한 일시적 현상으로 판단합니다.
+- 이 오탐이 `AGENTS.md` §"로컬 환경 제약"에 거짓 제약으로 기록됐다가 정정됐습니다. **하네스가 막으려던 종류의 오염을 스스로 만든 사례**이므로 학습 사항에 별도 기록했습니다.
+- 정정 대상: `AGENTS.md`, `docs/plan/v0.11.3-integration.md`(§7.3·§7.4·§10·§12), 본 로그, Linear KOR-22.
+
 ## Linear 이벤트
 
 - 프로젝트 `openwebui v0.11.3` 생성 (`f5d8fd0c-8c32-49b2-8d54-29dc45ce26b3`).
-- KOR-14(parent) + KOR-15~21(sub) + **KOR-22**(신규 — `npm run format` Prettier 3 비호환 조사).
+- KOR-14(parent) + KOR-15~21(sub) + **KOR-22**(신규 — `npm run format` 조사 → **오탐으로 종결**).
 - KOR-14 라벨 전이: `plan-draft` → `needs-review` → `plan-approved`.
 - **Linear 기록을 한글로 전환** (사용자 지시). 기존 영문 코멘트 2건은 이력으로 유지.
 
@@ -124,7 +144,7 @@ feature 브랜치: `feature/docs-plan-v0.11.3-integration`, `feature/upstream-me
 
 **다음 작업 순서**:
 
-1. **선행 — KOR-22 조사**: `npm run format`이 `main`에서도 깨지는지(= 기존 문제) 확인. CI `frontend.yaml`이 이 스크립트로 clean-tree를 게이트하므로 PR 전에 해소 필요.
+1. ~~**선행 — KOR-22 조사**~~ → **완료. 오탐이었고 블로커 아님** (§"정정" 참조). 바로 2번부터 진행.
 2. `integration/v0.11.3` + feature 브랜치 push → Stage 4 진입 (`verify-request`, PR 첨부, verifier diff 리뷰 → `verify-passed`).
 3. RC 태그 `v0.11.3-kwh.1-rc.1` → GH Actions 빌드 → `./scripts/local-test.sh v0.11.3-kwh.1-rc.1 --allow-rc` (계획서 §8.1, 브라우저 체크리스트 §8.3 — **SQLite LIKE UDF 검색 항목 포함**).
 4. PR `integration/v0.11.3 → main` → `--merge` 병합.
