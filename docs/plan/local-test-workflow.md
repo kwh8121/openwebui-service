@@ -207,6 +207,7 @@ DEFAULT_USER_ROLE=admin
 
 ```
 scripts/local-test.sh <tag> [flags]                   # 검증 실행 (기본: 데이터 보존, 프로덕션 미러)
+scripts/local-test.sh <tag> --health-timeout 900      # 느린 호스트에서 기동 대기 연장 (기본 600초)
 scripts/local-test.sh --down                          # 컨테이너 중지 (데이터 dir 유지)
 scripts/local-test.sh --list-backups                  # 백업 히스토리 조회
 scripts/local-test.sh --restore <timestamp>           # 백업으로 롤백
@@ -215,7 +216,7 @@ scripts/local-test.sh --prune-backups [--keep N]      # 오래된 백업 정리 
 
 **검증 실행 순서 (v4):**
 
-1. **인수 파싱** — `<image-tag>` 필수 (검증 모드), 플래그: `--fresh`, `--no-backup`, `--allow-rc`, `--restore <ts>`, `--list-backups`, `--prune-backups`, `--keep <N>`, `--down`
+1. **인수 파싱** — `<image-tag>` 필수 (검증 모드), 플래그: `--fresh`, `--no-backup`, `--allow-rc`, `--reseed-cache`, `--health-timeout <초>`, `--restore <ts>`, `--list-backups`, `--prune-backups`, `--keep <N>`, `--down`. `--health-timeout`은 `HEALTH_TIMEOUT_SECONDS` 환경변수로도 설정 가능(플래그 우선)
 2. **태그 형식 검증** — v3와 동일 (기본 최종 태그만, `--allow-rc` 시 RC 허용). "RC 태그는 스테이징 게이트에서 검증" 문구는 v4에서 "RC 태그는 정식 로컬 검증 이전의 pull-only 사전 확인용"으로 재해석
 3. **`--down` / `--list-backups` / `--restore` / `--prune-backups` 단축 명령** — 각 하위 명령을 처리 후 종료. `--down`은 태그 인수 불필요하도록 v4에서 개선 (플레이스홀더 태그 자동 주입해 compose 보간 충족)
 4. **전제 조건 확인:**
@@ -241,12 +242,17 @@ scripts/local-test.sh --prune-backups [--keep N]      # 오래된 백업 정리 
    - 실패 시 abort + "데이터 손실 방지를 위해 검증 중단. 원인 확인 후 재시도 또는 `--no-backup` 명시(주의)"
 7. **이미지 pull** — openwebui + pipelines 두 이미지 모두
 8. **컨테이너 기동** — `docker compose up -d` (두 서비스 동시)
-9. **성공 조건 4중 확인 (v4 확장):**
-   - openwebui state = `running`
-   - pipelines state = `running`
-   - openwebui logs `--tail 100` 오류 키워드 스캔 (`Traceback`, `ERROR`, `Failed to start`)
-   - `/health` 60초 폴링
-   - (선택) pipelines 응답 확인: `curl -sf http://127.0.0.1:9099/`
+9. **성공 조건 확인 (v4.3 — KOR-23 수정):**
+
+   **검사 순서가 중요하다.** v4.2까지는 `up -d` 직후 로그를 캡처하고 grep했다. 애플리케이션이 아직 아무것도 출력하지 않은 시점이라 검사가 **항상 통과하는 거짓 음성**이었다. v4.3은 `/health` 도달을 먼저 기다린 뒤 로그를 읽는다.
+   1. **`/health` 폴링** — 기본 **600초**, `--health-timeout SECONDS`로 조정. 폴링 중 컨테이너가 죽으면 타임아웃을 다 쓰지 않고 즉시 중단한다. 도달 소요 시간(`BOOT_SECONDS`)을 리포트에 출력
+   2. **컨테이너 state** — openwebui / pipelines 모두 `running`
+   3. **로그 스캔** (`--tail 200`) — 치명 패턴은 `Traceback|Failed to start|sqlalchemy\.exc`로, **프로덕션 배포 워크플로와 동일**하게 맞췄다. 단독 `ERROR`는 정상 로그에도 흔해 치명으로 두면 거짓 양성이 되므로 **WARN으로만** 보고한다. 로그가 비어 있으면 그 자체를 실패로 판정한다
+   4. **마이그레이션·DB assertion (신규)** — `Running upgrade` 라인 수 보고, `alembic current == heads` 비교(**불일치 = half-applied 스키마 → FAIL**), `PRAGMA integrity_check = ok`
+   5. **pipelines 도달성** — `/openapi.json` (프로덕션 워크플로가 검사하는 것과 동일 엔드포인트). 실패는 WARN
+
+   **타임아웃 근거**: 기동은 PyTorch(~2GB)를 로드한다. 메모리가 빠듯한 호스트에서 축적 데이터 위에 올릴 때 **실측 520초**가 걸렸고, 기존 하드코딩 60초는 정상 이미지에 `[FAIL]`을 냈다(2026-09-02 v0.11.3 사이클에서 3회 연속 재현).
+
 10. **결과 보고:**
     - 통과: 접속 URL + 수동 체크리스트 안내 (OAuth 로그인 포함)
     - 실패: **롤백 안내 출력** —
