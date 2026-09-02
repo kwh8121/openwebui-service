@@ -26,24 +26,11 @@
 - **`npm run test:frontend`는 로컬에서 watch 모드로 뜹니다.** 스크립트가 `vitest --passWithNoTests`로 `run` 서브커맨드가 없어 종료되지 않습니다. CI는 non-TTY라 단발 실행되지만, 로컬에서는 `npx vitest run --passWithNoTests`를 사용합니다.
 - **svelte-check 베이스라인**: `npm run check`는 upstream에서 물려받은 기존 오류 약 7,800건을 보고합니다. 병합이 깨끗하다는 기준은 총합이 0인 것이 아니라, **병합이 건드린 파일에 신규 오류가 0건**인 것입니다.
 
-### 로컬 게이트 스크립트는 `[FAIL]`을 냅니다 — 이미지 결함이 아닙니다
+### 로컬 게이트 기동은 오래 걸립니다
 
-**`scripts/local-test.sh`는 이 머신에서 정상 이미지에도 `[FAIL]`을 반환합니다.** 2026-09-02 v0.11.3 사이클에서 3회 연속 재현됐습니다. 원인은 스크립트 결함 2가지입니다.
+`scripts/local-test.sh`의 `/health` 대기 기본값은 **600초**입니다. 기동이 PyTorch(~2GB)를 로드하기 때문이며, 자동 백업(수백 MB tar)이 페이지 캐시를 채운 직후에는 특히 느립니다 — 실측 **백업 포함 520초 / `--no-backup` 121초**. 더 느린 호스트에서는 `--health-timeout <초>`로 늘립니다.
 
-1. **`/health` 폴링 60초 하드코딩** (`scripts/local-test.sh:552-563`, 연장 플래그 없음). 축적 데이터 위에서 PyTorch(~2GB)를 로드하는 데 **실측 520초**가 걸립니다. 지연 원인은 이 머신의 디스크 I/O 병목(게이트가 직전에 쓴 백업 tar가 페이지 캐시를 채운 상태에서 기동)이며 이미지와 무관합니다.
-2. **로그 검사가 무효 — 거짓 음성**. `:522` `docker compose up -d` 직후 **대기 없이** `:542`에서 로그를 캡처하므로 `LOG_OUT`이 비고, `:545`의 `Traceback|ERROR|Failed to start` grep이 **항상 통과**합니다. 기동 실패를 절대 잡지 못합니다.
-
-**`[FAIL]`을 이미지 결함으로 해석하지 마십시오.** 정상 릴리스를 폐기하고 다음 `kwh.N+1`을 발행하면 immutable 규칙상 되돌릴 수 없습니다. 아래로 **수동 판정**합니다.
-
-```bash
-docker inspect <container> --format '{{json .State.Health}}'   # healthy 도달 대기 (최대 10분)
-/usr/bin/curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8082/health
-docker logs <container> 2>&1 | grep -icE 'Traceback|Failed to start'   # 0이어야 함
-docker logs <container> 2>&1 | grep -iE 'Running upgrade|Context impl'  # 마이그레이션 실제 실행 여부
-# DB: alembic current == heads, PRAGMA integrity_check, 행 수 보존
-```
-
-근본 수정은 **Linear KOR-23**(health 타임아웃 60→600초 + `--health-timeout` 플래그, 로그 캡처 타이밍, 마이그레이션 자동 assertion)입니다. **KOR-23 완료 시 이 절을 삭제하십시오.**
+게이트가 `[FAIL]`을 내면 실제 실패입니다(2026-09-02 KOR-23 수정 이전에는 정상 이미지에도 `[FAIL]`이 났으나 해소됨). 판정 근거는 리포트의 `Boot time` / `Migration` 필드와 로그를 확인합니다. 단, **타임아웃만 실패한 경우**는 호스트가 느린 것일 수 있으니 `--health-timeout`을 늘려 재실행한 뒤 판단하고, **immutable 태그를 재빌드하거나 덮어쓰지 마십시오.**
 
 ### 도구 함정 (이 머신에서 실제 피해가 발생한 것만)
 
