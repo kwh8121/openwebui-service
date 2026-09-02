@@ -26,6 +26,33 @@
 - **`npm run test:frontend`는 로컬에서 watch 모드로 뜹니다.** 스크립트가 `vitest --passWithNoTests`로 `run` 서브커맨드가 없어 종료되지 않습니다. CI는 non-TTY라 단발 실행되지만, 로컬에서는 `npx vitest run --passWithNoTests`를 사용합니다.
 - **svelte-check 베이스라인**: `npm run check`는 upstream에서 물려받은 기존 오류 약 7,800건을 보고합니다. 병합이 깨끗하다는 기준은 총합이 0인 것이 아니라, **병합이 건드린 파일에 신규 오류가 0건**인 것입니다.
 
+### 로컬 게이트 스크립트는 `[FAIL]`을 냅니다 — 이미지 결함이 아닙니다
+
+**`scripts/local-test.sh`는 이 머신에서 정상 이미지에도 `[FAIL]`을 반환합니다.** 2026-09-02 v0.11.3 사이클에서 3회 연속 재현됐습니다. 원인은 스크립트 결함 2가지입니다.
+
+1. **`/health` 폴링 60초 하드코딩** (`scripts/local-test.sh:552-563`, 연장 플래그 없음). 축적 데이터 위에서 PyTorch(~2GB)를 로드하는 데 **실측 520초**가 걸립니다. 지연 원인은 이 머신의 디스크 I/O 병목(게이트가 직전에 쓴 백업 tar가 페이지 캐시를 채운 상태에서 기동)이며 이미지와 무관합니다.
+2. **로그 검사가 무효 — 거짓 음성**. `:522` `docker compose up -d` 직후 **대기 없이** `:542`에서 로그를 캡처하므로 `LOG_OUT`이 비고, `:545`의 `Traceback|ERROR|Failed to start` grep이 **항상 통과**합니다. 기동 실패를 절대 잡지 못합니다.
+
+**`[FAIL]`을 이미지 결함으로 해석하지 마십시오.** 정상 릴리스를 폐기하고 다음 `kwh.N+1`을 발행하면 immutable 규칙상 되돌릴 수 없습니다. 아래로 **수동 판정**합니다.
+
+```bash
+docker inspect <container> --format '{{json .State.Health}}'   # healthy 도달 대기 (최대 10분)
+/usr/bin/curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8082/health
+docker logs <container> 2>&1 | grep -icE 'Traceback|Failed to start'   # 0이어야 함
+docker logs <container> 2>&1 | grep -iE 'Running upgrade|Context impl'  # 마이그레이션 실제 실행 여부
+# DB: alembic current == heads, PRAGMA integrity_check, 행 수 보존
+```
+
+근본 수정은 **Linear KOR-23**(health 타임아웃 60→600초 + `--health-timeout` 플래그, 로그 캡처 타이밍, 마이그레이션 자동 assertion)입니다. **KOR-23 완료 시 이 절을 삭제하십시오.**
+
+### 도구 함정 (이 머신에서 실제 피해가 발생한 것만)
+
+- **`rtk` 훅이 명령을 가로채 위조 결과를 반환합니다.** `npx prettier --check`가 실패 상태인데 "All files formatted correctly"를 반환하고(미포맷 커밋 3회 발생), `curl`이 정상 엔드포인트에 `000`을 반환한 사례가 있습니다. **검증 목적 명령은 절대 경로로 호출합니다**: `./node_modules/.bin/prettier`, `/usr/bin/curl`. 결과가 직관과 어긋나면 도구를 의심하기 전에 절대 경로로 재실행해 교차 검증하십시오.
+- **`gh`가 저장소를 upstream(`open-webui/open-webui`)으로 해석합니다.** 이 저장소에는 `upstream` 리모트가 있어 `gh`의 기본 해석이 fork가 아닌 upstream을 가리킵니다. `gh pr create`가 "No commits between..."으로 실패하고 `gh pr list`가 upstream PR을 반환합니다. **모든 `gh` 명령에 `--repo kwh8121/openwebui-service`를 명시합니다.**
+- **`gh pr checks`는 체크 생성 전 `no checks reported`를 반환합니다.** CI 대기 루프의 종료 조건을 `pending` 부재로만 잡으면 즉시 오탈출합니다. `pending|no checks reported` 둘 다 미완료로 처리하십시오.
+- **로컬 테스트 컨테이너 조작에는 env가 필요합니다.** `docker compose -f docker-compose.local-test.yaml down`조차 `OPENWEBUI_LOCAL_TEST_TAG`(v 접두사 필수)를 요구합니다 — compose의 `:?` 가드 때문입니다. 미설정 시 보간 실패로 중단됩니다.
+- **로컬 테스트 포트는 `8082`**(openwebui), `9099`(pipelines)입니다. 검증 실패 시 도구 탓으로 단정하기 전에 `docker port <container>`로 실제 매핑을 확인하십시오.
+
 ## 검증 및 포매팅
 
 - 프론트엔드 타입 검사: `npm run check`. 프로덕션 빌드: `npm run build` — **단, 빌드는 로컬에서 실행하지 않습니다** (위 §"로컬 환경 제약" 참조). 두 명령 모두 Pyodide를 먼저 받습니다.
@@ -43,16 +70,16 @@
 
 2026-08-11 채택. 각 정보 유형에는 정본 위치가 하나씩 있고, 다른 도구에는 링크나 짧은 요약만 두며 절대 복제하지 않습니다.
 
-| 정보 유형                                  | 원본 위치                                           | 다른 도구에는 어떻게 둘 것인가                                                                                      |
-| ------------------------------------------ | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| 계획안, 검증 요청, 상태 전이 (in-flight)   | Linear                                              | jobs log에는 결과 요약만                                                                                            |
-| **확정된 개발·리뷰 계획 (approved plans)** | **`docs/plan/`**                                    | **Linear 이슈는 유지하고 `create_attachment`로 `docs/plan/<file>.md` 링크만 (승격 후에도 stage 3~4 포인터로 사용)** |
-| 세션에서 실제로 한 일                      | jobs log (`docs/jobs/YYYY-MM-DD-openwebui-jobs.md`) | OpenViking이 watch로 자동 인제스션                                                                                  |
-| 코드 변경, 브랜치, PR, 태그                | Git / GitHub                                        | Linear·jobs log에는 링크와 요약만                                                                                   |
-| 배포 승인·결과 evidence                    | GitHub Issue                                        | Linear에는 `create_attachment` 링크만                                                                               |
-| **upstream Open WebUI 버전·기능 참고자료** | **`docs/references/`**                              | **jobs log에는 참조 링크만. mem0에는 넣지 않음**                                                                    |
-| 장기 학습, 반복 실수, 운영 원칙            | jobs log → OpenViking                               | mem0에는 넣지 않음 (참고 캐시로 남을 수 있음)                                                                       |
-| 개인 선호, 답변 스타일, 일반 습관          | mem0                                                | 프로젝트 문서에는 넣지 않음                                                                                         |
+| 정보 유형                                  | 원본 위치                                           | 다른 도구에는 어떻게 둘 것인가                                                                             |
+| ------------------------------------------ | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| 계획안, 검증 요청, 상태 전이 (in-flight)   | Linear                                              | jobs log에는 결과 요약만                                                                                   |
+| **확정된 개발·리뷰 계획 (approved plans)** | **`docs/plan/`**                                    | **Linear 이슈는 유지하고 attachment로 `docs/plan/<file>.md` 링크만 (승격 후에도 stage 3~4 포인터로 사용)** |
+| 세션에서 실제로 한 일                      | jobs log (`docs/jobs/YYYY-MM-DD-openwebui-jobs.md`) | OpenViking이 watch로 자동 인제스션                                                                         |
+| 코드 변경, 브랜치, PR, 태그                | Git / GitHub                                        | Linear·jobs log에는 링크와 요약만                                                                          |
+| 배포 승인·결과 evidence                    | GitHub Issue                                        | Linear에는 attachment 링크만                                                                               |
+| **upstream Open WebUI 버전·기능 참고자료** | **`docs/references/`**                              | **jobs log에는 참조 링크만. mem0에는 넣지 않음**                                                           |
+| 장기 학습, 반복 실수, 운영 원칙            | jobs log → OpenViking                               | mem0에는 넣지 않음 (참고 캐시로 남을 수 있음)                                                              |
+| 개인 선호, 답변 스타일, 일반 습관          | mem0                                                | 프로젝트 문서에는 넣지 않음                                                                                |
 
 **4-도구 역할 요약:**
 
@@ -68,9 +95,11 @@
 - **`docs/manual/`**: **이 fork의** 배포·운영·정책 문서 (kwh-release-routine, github-control-plane-local-agent-handoff, github-actions-ghcr-release-deployment, 릴리스별 배포 가이드, oauth notes, korean-locale-image-notes, openwebui-repo, openwebui-migration-notes 등). fork 이력에 종속.
 - **`docs/references/`**: **upstream Open WebUI에 관한** 조사·업데이트·기능 참고 (release notes, 업데이트 리포트, 기능 research). fork와 무관하게 upstream 변화만 반영. 경계가 모호한 파일은 팀 판단에 맡기고 이번 스코프에서 재분류하지 않음.
 
+**Linear에 URL을 붙이는 방법 (MCP)**: `create_attachment` 도구는 **base64 파일 업로드 전용**이라 URL 연결에 쓸 수 없습니다. URL은 `save_issue`의 `links` 필드(`[{url, title}]`, append-only)로 붙입니다. 위 표의 "attachment"는 전부 이 방식을 뜻합니다.
+
 **승격 경로 (수동, 자동화 없음)**:
 
-- Linear plan-approved → `docs/plan/<slug>.md` 파일 작성 → Linear 이슈에 `create_attachment` 링크
+- Linear plan-approved → `docs/plan/<slug>.md` 파일 작성 → Linear 이슈에 attachment 링크
 - Upstream release/기능 발견 → `docs/references/<slug>.md` 작성
 
 ## 개발·릴리스 워크플로 (5단계)
@@ -80,8 +109,8 @@
 1. **계획 (Planning)** — Planner 에이전트가 Linear Project + 부모 이슈 + 하위 이슈를 생성합니다. 라벨: `plan-draft`. 부모/자식 계층, 의존성용 `blockedBy`, 향후 브랜치 명명에 쓸 `gitBranchName` 자동 생성을 활용합니다.
 2. **계획 검증 (Plan verification)** — Planner가 부모 라벨을 `plan-draft` → `needs-review`로 전이합니다. Verifier 에이전트가 `list_issues --label needs-review`로 이를 집어 findings를 이슈 코멘트로 게시하고(PASS/CRITICAL/MEDIUM/MINOR + 판정), 승인 시 `plan-approved`로, 수정 요청 시 `plan-draft`로 되돌립니다. 코멘트 스레드가 감사 지면입니다.
 3. **개발 (Development)** — Dev 에이전트가 `plan-approved` 하위 이슈를 집어 그 이슈의 `gitBranchName` 필드로 feature 브랜치를 만듭니다. 표준 `feature/* → integration/vX.Y.Z → main` 흐름(아래 §"릴리스 루틴 및 세션 연속성" 참조). Linear 이슈 상태("In Progress")는 진행 포인터일 뿐이며 진실은 git이 보유합니다.
-4. **개발 검증 (Dev review)** — Dev 에이전트가 이슈 라벨을 `verify-request`로 전이합니다. Verifier가 이를 집어 diff를 리뷰하고(Linear 이슈에 `create_attachment`로 연결된 GitHub PR 경유) findings를 게시한 뒤 `verify-passed`로 전이합니다. 2단계와 동일한 코멘트 스레드 감사 패턴입니다.
-5. **배포 (Deployment)** — **변경 없음, GitHub Issue 유지.** 로컬 dev 에이전트가 handoff §"배포 요청 계약"(Protocol v1.2)에 따라 `Production deployment request` Issue를 제출합니다. opencode 프로덕션 에이전트가 `deploy-approved-production-release.yaml` 워크플로로 실행합니다. Linear 이슈는 감사 추적을 위해 `create_attachment`로 GitHub 배포 Issue URL을 참조합니다.
+4. **개발 검증 (Dev review)** — Dev 에이전트가 이슈 라벨을 `verify-request`로 전이합니다. Verifier가 이를 집어 diff를 리뷰하고(Linear 이슈에 attachment로 연결된 GitHub PR 경유) findings를 게시한 뒤 `verify-passed`로 전이합니다. 2단계와 동일한 코멘트 스레드 감사 패턴입니다.
+5. **배포 (Deployment)** — **변경 없음, GitHub Issue 유지.** 로컬 dev 에이전트가 handoff §"배포 요청 계약"(Protocol v1.2)에 따라 `Production deployment request` Issue를 제출합니다. opencode 프로덕션 에이전트가 `deploy-approved-production-release.yaml` 워크플로로 실행합니다. Linear 이슈는 감사 추적을 위해 attachment로 GitHub 배포 Issue URL을 참조합니다.
 
 **라벨 어휘** (워크스페이스 레벨, 2026-08-11 생성):
 
