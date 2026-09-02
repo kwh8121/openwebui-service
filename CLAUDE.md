@@ -8,6 +8,8 @@ Claude Code가 세션 시작 시 이 파일을 자동으로 읽습니다. 이 �
 
 - **로컬에서 `npm run build`를 실행하지 않습니다.** 이 개발 PC(7 GB RAM)는 `vite build`가 heap OOM으로 실패합니다. 빌드 권위는 **GitHub Actions**(`v*-kwh.*` 태그 트리거)이며, `scripts/local-test.sh`가 그 결과 이미지를 검증합니다.
 - **Node는 `nvm use 22`**로 전환 후 사용합니다 (프로젝트 engine-strict `<=22.x`, 기본 PATH에는 Node 24가 잡혀 있음).
+- **`gh` 명령에는 항상 `--repo kwh8121/openwebui-service`를 붙입니다.** `upstream` 리모트 때문에 `gh`가 기본적으로 upstream 저장소를 가리켜 PR 생성이 실패합니다.
+- **검증 목적 명령은 절대 경로로 호출합니다** (`./node_modules/.bin/prettier`, `/usr/bin/curl`). `rtk` 훅이 결과를 위조한 사례가 있습니다.
 
 전체 제약 목록은 `AGENTS.md` §"로컬 환경 제약"에 있습니다.
 
@@ -28,9 +30,10 @@ Claude Code가 세션 시작 시 이 파일을 자동으로 읽습니다. 이 �
 3. **push**: feature 브랜치와 integration 브랜치 모두 `origin`으로.
 4. **RC 태그**를 integration tip에 발행: `git tag -a vX.Y.Z-kwh.N-rc.M <sha> -m "..."` → push → GH Actions가 `ghcr.io/kwh8121/openwebui-service:vX.Y.Z-kwh.N-rc.M` 빌드 (`v` 접두사 필수).
 5. **로컬 프로덕션 미러 게이트 (RC)**: `./scripts/local-test.sh vX.Y.Z-kwh.N-rc.M --allow-rc`. 축적된 로컬 데이터 위에서 upgrade 마이그레이션·OAuth·pipelines·RAG·브랜드·`/health`를 검증합니다. 상세는 `docs/plan/local-test-workflow.md`. **운영 호스트 병렬 기동 방식의 스테이징 검증은 폐기됐습니다.**
+   ⚠️ **이 스크립트는 정상 이미지에도 `[FAIL]`을 냅니다** (KOR-23 결함, 3회 연속 재현). `[FAIL]`을 이미지 결함으로 해석하지 말고 `AGENTS.md` §"로컬 게이트 스크립트는 `[FAIL]`을 냅니다"의 수동 판정 절차를 따르십시오.
 6. **PR** `integration/vX.Y.Z` → `main`; `--merge` 방식으로 병합; 로컬 `main` 동기화 (`git fetch && git checkout main && git pull --ff-only`).
 7. **최종 태그**를 병합된 main tip에 발행: `git tag -a vX.Y.Z-kwh.N <sha> -m "..."` → push → GH Actions가 프로덕션 이미지 빌드.
-8. **로컬 게이트 재실행 (최종 태그)**: `./scripts/local-test.sh vX.Y.Z-kwh.N`. 동일한 축적 데이터로 2차 게이트.
+8. **로컬 게이트 재실행 (최종 태그)**: `./scripts/local-test.sh vX.Y.Z-kwh.N`. 동일한 축적 데이터로 2차 게이트. 5번의 `[FAIL]` 경고가 동일하게 적용됩니다.
 9. **프로덕션 배포는 GitHub Issue 핸드오프로 수행합니다.** `Production deployment request` Issue를 제출하고(Protocol v1.2 §"배포 요청 계약"), 릴리스별 배포 가이드 `docs/manual/kwh-deploy-guide-vX.Y.Z-kwh.N.md`를 함께 커밋합니다. opencode 프로덕션 에이전트가 `deploy-approved-production-release.yaml` 워크플로로 실행하며, 이 워크플로가 SQLite WAL-safe 백업·이미지 pin·`--no-deps` 재기동·스모크를 자동 수행합니다. **로컬 에이전트가 프로덕션에 직접 SSH 배포하지 않습니다.**
 10. **모든 변경(문서 포함)**은 동일 흐름을 따릅니다: `feature/*` → `integration/vX.Y.Z` → PR → `main`. `feature/docs-*` → `main` 직행 단축 경로는 **폐지되었습니다** (2026-07-31). 문서 전용 변경은 새 태그나 이미지 재빌드가 필요 없습니다.
 
