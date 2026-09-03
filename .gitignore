@@ -330,3 +330,6 @@ skills-lock.json
 
 # Claude Code harness local state (personal scope)
 .claude/
+
+# 로컬 작업 계획과 증거
+.omo/
