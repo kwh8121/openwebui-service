@@ -1,0 +1,77 @@
+{
+	"evidenceCommands": [
+		{
+			"command": "gh issue view --repo kwh8121/openwebui-service 31 --json state,number,url,title,body",
+			"output": "{\"state\":\"CLOSED\",\"number\":31,\"url\":\"https://github.com/kwh8121/openwebui-service/issues/31\",\"title\":\"Production deployment request: v0.11.4-kwh.1\",\"body\":\"Tag: v0.11.4-kwh.1\\nMain SHA: 1111111111111111111111111111111111111111\\nRun: https://github.com/kwh8121/openwebui-service/actions/runs/123456789\\nImage digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}"
+		},
+		{
+			"command": "gh run view 123456789 --repo kwh8121/openwebui-service --json databaseId,status,conclusion,event,headBranch,headSha,url",
+			"output": "{\"databaseId\":123456789,\"status\":\"completed\",\"conclusion\":\"success\",\"event\":\"workflow_dispatch\",\"headBranch\":\"v0.11.4-kwh.1\",\"headSha\":\"1111111111111111111111111111111111111111\",\"url\":\"https://github.com/kwh8121/openwebui-service/actions/runs/123456789\"}"
+		},
+		{
+			"command": "gh api repos/kwh8121/openwebui-service/commits/v0.11.4-kwh.1",
+			"output": "{\"sha\":\"1111111111111111111111111111111111111111\"}"
+		},
+		{
+			"command": "GIT_MASTER=1 git rev-parse --verify origin/main",
+			"output": "1111111111111111111111111111111111111111"
+		},
+		{
+			"command": "GIT_MASTER=1 git ls-remote --exit-code origin refs/heads/main",
+			"output": "1111111111111111111111111111111111111111 refs/heads/main"
+		},
+		{
+			"command": "docker inspect openwebui --format={{json .}}",
+			"output": "{\"Name\":\"/openwebui\",\"Config\":{\"Image\":\"ghcr.io/kwh8121/openwebui-service@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"},\"State\":{\"Status\":\"running\",\"Health\":{\"Status\":\"healthy\"}}}"
+		}
+	],
+	"blockedWithoutEvidence": [
+		"GIT_MASTER=1 git tag -a v0.11.4-kwh.1 -m release",
+		"GIT_MASTER=1 git push origin main",
+		"gh workflow run deploy-approved-production-release.yaml --repo kwh8121/openwebui-service",
+		"docker compose -f docker-compose.deploy.yaml up -d",
+		"sudo systemctl restart openwebui",
+		"tar -czf backup.tar.gz openwebui"
+	],
+	"allowedWithoutEvidence": [
+		"gh issue view --repo kwh8121/openwebui-service 31 --json state,number,url,title,body",
+		"GIT_MASTER=1 git status --short",
+		"docker compose -f docker-compose.deploy.yaml ps",
+		"GIT_MASTER=1 git push origin feature/post-issue-31-deployment-harness"
+	],
+	"composedSinkCommands": [
+		"git status && git push origin main",
+		"sh -c 'docker compose up -d'",
+		"bash -lc 'git push origin main'",
+		"$(printf sudo) systemctl restart openwebui"
+	],
+	"alwaysDeniedBypasses": [
+		"/usr/bin/git push origin main",
+		"/usr/bin/docker compose -f docker-compose.deploy.yaml up -d",
+		"env git push origin main",
+		"command git push origin main",
+		"git -c core.hooksPath=/tmp push origin main",
+		"/bin/sh -c 'gh workflow run deploy-approved-production-release.yaml'",
+		"gh pr merge 99 --repo kwh8121/openwebui-service --merge",
+		"gh release create v0.11.4-kwh.2 --repo kwh8121/openwebui-service",
+		"gh issue delete 31 --repo kwh8121/openwebui-service --yes",
+		"gh api repos/kwh8121/openwebui-service/actions/workflows/deploy-approved-production-release.yaml/dispatches --method POST",
+		"docker compose -f docker-compose.deploy.yaml run openwebui true",
+		"docker compose -f docker-compose.deploy.yaml exec openwebui true",
+		"docker cp local.txt openwebui:/tmp/local.txt",
+		"docker commit openwebui unsafe-image",
+		"docker image prune -f"
+	],
+	"fragmentedExecutableBypasses": [
+		"g''it push origin main",
+		"g\"\"h pr merge 99 --repo kwh8121/openwebui-service --merge",
+		"d\\ocker compose -f docker-compose.deploy.yaml up -d",
+		"/usr/bin/g''it push origin main",
+		"/usr/bin/d\\ocker image prune -f",
+		"$GIT_BIN push origin main",
+		"g${EMPTY}it push origin main",
+		"env g''it push origin main",
+		"command g\"\"h issue delete 31 --repo kwh8121/openwebui-service --yes",
+		"GIT_MASTER=1 g\\it push origin feature/post-issue-31-deployment-harness"
+	]
+}
