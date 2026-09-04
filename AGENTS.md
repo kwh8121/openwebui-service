@@ -70,7 +70,7 @@
 
 **4-도구 역할 요약:**
 
-- **A. Linear** = 지금 살아 있는 작업판. 작업 단위의 대화·상태만. 세션 전체 요약은 jobs log로 이관.
+- **A. Linear** = 지금 살아 있는 작업판. 작업 단위의 대화·상태만. 세션 전체 요약은 jobs log로 이관. **Linear MCP는 Claude Code 세션에서만 사용 가능하며 opencode 프로덕션 에이전트에는 통합이 없다** — opencode 세션은 Linear를 `unresolved`로 취급하고 GitHub Issue/Actions를 권위 증적으로 쓴다(`.opencode/skill/deployment-context/SKILL.md`). 따라서 **배포 경로의 권위 증적은 Linear가 아니라 GitHub이며**, 이는 §"개발·릴리스 워크플로" 5단계가 GitHub Issue에 남는 이유와 일치한다.
 - **B. jobs log** = 세션 종료 후 남기는 공식 작업일지. Append-only 감사 기록. 오늘 무엇을 했는가·어떤 결정을 했는가·어떤 이슈/PR/커밋이 생겼는가·어떤 문제가 발견됐는가·다음 세션 재개 지점·학습 사항을 포함.
 - **C. OpenViking** = 다음 에이전트가 읽을 장기 컨텍스트 DB. Watch 대상: `docs/jobs/`, `docs/manual/`, `docs/plan/`, `docs/references/`, `AGENTS.md`, `CLAUDE.md`. GitHub repo watch(24h refresh)로 committed 파일 자동 인제스션. Linear 승인 계획은 `docs/plan/` 승격 후 자동 커버, GitHub 배포 이슈 결과는 jobs log를 게이트웨이로 커버.
 - **D. mem0** = 프로젝트 밖 개인 선호. auto-capture 훅이 프로젝트 결정도 저장하나 이는 참고 캐시이며 진실 소스가 아니다. 원칙 판단 시 jobs log와 OpenViking 이관본이 우선하며 mem0 결과에 의존하지 말 것.
