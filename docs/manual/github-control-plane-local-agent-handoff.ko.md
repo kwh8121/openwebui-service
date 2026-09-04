@@ -79,7 +79,7 @@ v<major>.<minor>.<patch>-kwh.<release>
 
 1. **Release identifiers** — 버전, main tip SHA, GHCR image tag, digest(또는 프로덕션 에이전트가 pull 후 취득 방법), git-SHA parity tag, Actions Run URL, upstream base, fork carryovers 요약, rollback target tag
 2. **Deployment overview** — 변경 내용, 실행될 Alembic 마이그레이션 (SHA + 이름), fork 보존 항목 요약
-3. **Prerequisites verification** — 경로·파일·compose project·현재 이미지·GHCR auth·env sanity·디스크
+3. **Prerequisites verification** — 경로·파일·compose project·현재 이미지·GHCR auth·env sanity·디스크. **검증 불가능한 런타임 상태는 단정하지 않는다** (아래 §"사전조건 기술 규칙")
 4. **Pre-deployment backup (MANDATORY)** — WAL-safe 절차 (stop→tar), backup 경로 기록, 무결성 검증
 5. **Deployment execution** — env exports, compose config dry-run, pull, up -d --no-deps
 6. **Migration monitoring** — Alembic 로그 예상, "startup complete" 마커, /health polling
@@ -90,6 +90,30 @@ v<major>.<minor>.<patch>-kwh.<release>
 11. **Appendix B. External references** — 문서 우선순위 재확인
 
 각 guide는 릴리스 스코프다. rollback target, digest, 마이그레이션 목록이 릴리스마다 다르므로 편집 없이 재사용 불가.
+
+### 사전조건 기술 규칙 (스펙 v1.1)
+
+**로컬 개발 에이전트는 프로덕션 상태를 조회할 권한이 없다** (§"역할 범위" — SSH 접속도 Docker Compose 실행도 하지 않는다). 따라서 가이드 작성 시점에 확인할 수 없는 프로덕션 런타임 상태는 **단정하지 않는다.**
+
+대상: 컨테이너 기동 여부, 실행 중인 이미지, PersistentConfig 실효값(`ENABLE_LOGIN_FORM`, `ENABLE_IMAGE_GENERATION` 등 — env보다 DB 값이 우선), 디스크 여유, 그 밖에 관리자에게 전달받았을 뿐 직접 관측하지 못한 모든 값.
+
+이런 값에 의존하는 workflow 입력은 고정값이 아니라 **분기 절차**로 쓴다.
+
+```
+❌ check_pipelines: true
+   (+ "pipelines가 기동 중이어야 함"을 하드 dispatch 사전조건으로 명시)
+
+✅ dispatch 직전 `curl -sf http://localhost:9099/openapi.json` 확인
+   → 200      : check_pipelines=true,  §7.4·§9 pipelines 항목 = PASS 필수
+   → 실패/미기동: check_pipelines=false, §7.4·§9 pipelines 항목 = SKIPPED
+   어느 쪽이든 선택 근거를 배포 Issue에 기록한다. 두 경로 모두 정상이다.
+```
+
+분기의 각 갈래마다 **§7 스모크와 §9 Success markers의 해당 항목을 PASS / SKIPPED 중 무엇으로 기록할지 함께 규정한다.** `SKIPPED`는 "증거 미수집"을 뜻하며 통과로 롤업하지 않는다.
+
+**근거**: `v0.11.3-kwh.1` 가이드가 `check_pipelines=true`를 단정형으로 규정했으나 실제 프로덕션 pipelines는 `Exited (137)`였다. 고정 가이드의 4개 절(§3.6·§5.1·§7.4·§9)이 배포 시점에 supersede돼야 했고, immutable 원칙상 파일을 고칠 수 없어 Issue 코멘트로 편차 기록을 남겼다 (Issue #31, 2026-09-02). 분기 절차로 썼다면 편차가 아니라 정상 경로였다.
+
+**기존 가이드는 소급 수정하지 않는다.** 릴리스별 실행 아티팩트이므로 발행 시점 기록으로 보존하고, 이 규칙은 다음 사이클 가이드부터 적용한다.
 
 ## 배포 요청 계약
 
@@ -259,7 +283,7 @@ Browser checks required after deployment: OAuth, real model chat, upload/RAG, br
 
 **호환**:
 
-- Per-release deploy guide 스펙 v1.0 (§"Per-Release Deploy Guide Template"에서 정의)
+- Per-release deploy guide 스펙 **v1.1** (§"Per-Release Deploy Guide Template"에서 정의). v1.1에서 §"사전조건 기술 규칙" 추가 — 검증 불가능한 프로덕션 런타임 상태를 단정하지 말고 분기 절차로 기술 (2026-09-04, KOR-24)
 - `.github/workflows/docker.yaml` (v*-kwh.* tag build)
 - `.github/workflows/deploy-approved-production-release.yaml` (v1.2 신설, `workflow_dispatch`)
 - `.github/ISSUE_TEMPLATE/production_deployment_request.yaml` (v1.2 신설)
