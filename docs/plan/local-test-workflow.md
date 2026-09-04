@@ -342,6 +342,58 @@ scripts/local-test.sh --prune-backups [--keep N]      # 오래된 백업 정리 
 
 ---
 
+## Pipelines 검증 사전 설정 (v4.4 신규 — 2026-09-04)
+
+**이 절을 건너뛰면 게이트가 pipelines 경로를 전혀 검증하지 못합니다.** v0.11.3 사이클 전체(RC + 최종 태그 게이트 2회)가 그 상태로 통과했고, 사후에야 발견됐습니다.
+
+### 두 가지가 모두 갖춰져야 합니다
+
+**① 플러그인 파일** — `PIPELINES_LOCAL_TEST_DATA` 디렉터리(기본 `~/openwebui-local-test-pipelines/`)에 저장소의 `pipelines/*.py`를 복사합니다.
+
+```bash
+cp pipelines/*.py ~/openwebui-local-test-pipelines/
+```
+
+`pipelines/failed/`는 **복사하지 않습니다** — `Pipeline` 클래스가 없어 로드 실패로 격리된 파일입니다.
+
+비어 있으면 Pipelines 런타임은 정상 기동하고 `/openapi.json`도 200을 반환하지만 **노출할 모델이 0개**이므로, 게이트의 pipelines 검사는 "서비스 도달성"만 확인하게 됩니다.
+
+**② openwebui → pipelines 연결 활성화** — 이것이 놓치기 쉬운 쪽입니다.
+
+`.env.local-test`의 `OPENAI_API_BASE_URL=http://pipelines:9099`는 **PersistentConfig에 덮여 무효**입니다. 실제 연결은 축적된 로컬 DB의 `config` 테이블이 결정합니다.
+
+```bash
+# 현재 값 확인
+python3 -c "
+import sqlite3, json
+c = sqlite3.connect('$HOME/openwebui-local-test-data/webui.db')
+urls = json.loads(c.execute(\"select value from config where key='openai.api_base_urls'\").fetchone()[0])
+cfgs = json.loads(c.execute(\"select value from config where key='openai.api_configs'\").fetchone()[0])
+for i, u in enumerate(urls):
+    print(i, u, 'enable=', cfgs.get(str(i), {}).get('enable'))
+"
+```
+
+pipelines 항목이 **`http://pipelines:9099`**(compose 서비스명)이고 **`enable=true`**여야 합니다.
+
+> **주의**: `http://host.docker.internal:9099`는 이 compose 구성에서 동작하지 않습니다. 해석되지 않을뿐더러, 9099는 호스트 `127.0.0.1`에만 바인딩돼 컨테이너에서 도달할 수 없습니다. 2026-09-04 이전 로컬 baseline이 이 값이었고 `enable=false`였습니다.
+
+값을 고친 뒤에는 **openwebui를 재기동**해야 반영됩니다(`docker compose -f docker-compose.local-test.yaml restart openwebui`).
+
+### 검증 방법
+
+컨테이너 기동 후 다음이 모두 성립하면 pipelines 경로가 실제로 검증된 것입니다.
+
+1. **플러그인 로드** — `docker logs <pipelines 컨테이너> | grep "Loaded module"` 에 파일 수만큼 나타나고 실패가 없음
+2. **모델 노출** — openwebui `/api/models`에 pipeline 모델이 나타남 (관리자 토큰 필요)
+3. **필터 체인 실행** — pipelines 로그에 `filter/inlet` → `chat/completions` → `filter/outlet` 이 각각 200으로 기록됨
+
+3번이 핵심입니다. `utils/middleware.py`의 필터 파이프라인은 **로드된 pipeline이 있고 연결이 활성일 때만** 실행되므로, 이 세 줄이 없으면 해당 코드 경로는 미검증입니다.
+
+### 알려진 동작 — 비스트리밍 빈 응답
+
+`stream: false`로 pipeline 모델에 요청하면 HTTP 200이지만 본문이 빕니다. Pipelines 런타임이 제너레이터 반환 pipe를 비스트리밍 모드에서 소비하지 않기 때문이며, openwebui 결함이 아닙니다. 실제 UI는 스트리밍을 쓰므로 **검증도 `stream: true`로 수행**합니다.
+
 ## 로컬 수동 검증 체크리스트 (v4 프로덕션 미러 스코프)
 
 스크립트가 확인하는 항목 (자동, v4 4중 확인):
