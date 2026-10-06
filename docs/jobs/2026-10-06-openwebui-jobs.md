@@ -86,3 +86,94 @@ GH Actions 빌드 `#37413977492` 성공(약 9분). `./scripts/local-test.sh v0.1
 3. 수동 검증 통과 후: `feature/docs-v0.11.4-integration` 병합 → PR `integration/v0.11.4` → `main` (`--merge`) → 최종 태그 `v0.11.4-kwh.1` → 최종 태그 게이트 → 배포 Issue.
 4. PR #41 과 v0.11.4 PR 의 순서 결정 필요. `integration/v0.11.4` 는 `integration/v0.11.3` tip 에서 분기했으므로 #41 을 먼저 병합하면 v0.11.4 PR 이 그 위에 자연스럽게 이어지고, v0.11.4 PR 을 먼저 병합하면 #41 은 변경 사항이 없어진다.
 5. feature 개발은 `integration/v0.11.4` 에서 분기한다.
+
+---
+
+## 06:38 — 배포 하네스 보호 + 러너 최소권한 + 게이트 격리 (병행 세션)
+
+위 v0.11.4 통합과 **별개 세션**에서 수행했다. 프로덕션 컨테이너에는 어떤 조작도 하지 않았고, 모든 단계에서 `openwebui-openwebui-1`의 `StartedAt`(`2026-09-02T09:49:50Z`)과 `/health` 200을 전후 비교해 무중단을 확인했다.
+
+### 1. GitHub ruleset 3건 신설 — `main`·태그·`integration/*` 보호
+
+보호가 전혀 없던 상태(`GET /branches/main/protection` → 404, `GET /rulesets` → `[]`)를 해소했다. 관제 평면 문서의 1회 설정 8번이 미완료였다.
+
+| ID       | 이름                          | 대상                       | 규칙                                               | bypass |
+| -------- | ----------------------------- | -------------------------- | -------------------------------------------------- | ------ |
+| 22414966 | main protection               | `~DEFAULT_BRANCH`          | deletion, non_fast_forward, pull_request(승인 0건) | 없음   |
+| 22414967 | release tags immutable        | `refs/tags/v*-kwh.*`       | deletion, update, non_fast_forward                 | 없음   |
+| 22414968 | integration branch protection | `refs/heads/integration/*` | deletion, non_fast_forward                         | 없음   |
+
+설계 판단 3건:
+
+- **required status checks는 넣지 않았다.** `Frontend Build`는 `paths-ignore: [backend/**]`, `Python CI`는 `paths: [backend/**]`로 둘 다 path-filtered다. 문서만 바꾼 PR(이 저장소 PR의 다수)은 두 체크가 **보고되지 않아** 영구 차단된다. 넣으려면 path-aware skip job이 선행돼야 한다.
+- **PR 필수 승인은 0건.** 단독 관리자는 자신의 PR을 승인할 수 없어 1건 이상 요구 시 릴리스 병합이 막힌다. PR 경로만 강제하고 self-merge는 유지.
+- **태그는 생성 허용, update·deletion만 차단.** 릴리스 루틴의 태그 발행은 그대로 동작하고 immutable 규약이 서버 레벨로 강제된다. 이 세션의 origin 태그 정리(`v0.11.0` 등 bare 태그)는 `v*-kwh.*`에 매칭되지 않아 영향받지 않았다.
+
+PR #41이 05:05Z에 ruleset 하에서 정상 병합된 것으로 설정이 릴리스 흐름을 깨지 않음을 실증했다.
+
+### 2. 운영 워크스페이스를 `origin/main`으로 정렬
+
+`/home/ubuntu/openwebui`가 `feature/docs-korean-agents-guide`(main 대비 1,347 커밋 뒤)에 머물러 있었고, 디스크에 **폐기된 구버전 하네스**가 남아 실제와 불일치했다: `.github/workflows/deploy-production.yaml`(구버전 입력명), `ops/openwebui-deploy`, `ops/install-production-actions-runner`, `docs/manual/github-control-plane-deployment.{ko.,}md`. 이 문서들은 존재하지 않는 `/usr/local/sbin/openwebui-deploy` 방식을 전제했다.
+
+- 정렬 전 미커밋·미추적 전량을 로컬 브랜치 `wip/workspace-snapshot-20260907`(`cf6ed8c2b`)에 커밋해 보존(push 안 함). 브랜치명 날짜는 당시 호스트 시계가 약 29일 뒤처진 상태에서 생성돼 실제(2026-10-06)와 다르다.
+- 전환 중 함께 사라진 `data/state_store.db/*.bin`(에이전트 메모리 상태)과 `.opencode/{opencode.json,mem0-mcp.cjs,skills/}`는 폐기 대상이 아니라 복원했다.
+- 검증: `docker-compose.deploy.yaml` sha256 `adc5693f…` 불변, `.env.openwebui.oauth` sha256·0600·inode 불변, `openwebui/webui.db` inode 불변, 컨테이너 healthy, `docker compose config` OK.
+
+**후속 필요**: 스냅샷 브랜치에만 남은 고유 문서 9건(jobs log 3건, `docs/plans/` 2건 — main은 단수 `docs/plan/` 사용, `docs/README.md`, `docs/manual` 2건, `docs/references/SECURITY.md`). 보존이 필요하면 정규 경로로 승격해야 한다.
+
+### 3. 러너 최소권한 — sudoers 대신 `NoNewPrivileges`
+
+러너는 `User=ubuntu`로 돌고 `ubuntu`는 `/etc/sudoers.d/90-cloud-init-users`로 `NOPASSWD:ALL`을 갖는다. 즉 **workflow dispatch ≈ 호스트 root**였다.
+
+문서가 제시한 "단일 명령만 허용"안은 실행할 수 없었다 — `ubuntu`와 `root` **패스워드가 모두 locked**(`passwd -S` → `L`)이어서 `NOPASSWD`를 제거하면 sudo를 완전히 상실하고, 남는 경로는 SSM 하나인데 호스트 내부에서 운영자 IAM의 `ssm:StartSession` 허용 여부를 검증할 수 없다(되돌릴 수 없는 잠금 위험).
+
+대신 **sudoers를 건드리지 않고** 러너 유닛에 드롭인을 추가했다:
+
+```
+/etc/systemd/system/actions.runner.kwh8121-openwebui-service.openwebui-prod-runner.service.d/10-hardening.conf
+[Service]
+NoNewPrivileges=yes
+```
+
+- 러너와 **모든 워크플로 자식 프로세스**가 setuid 경유 상승을 잃는다(커널 플래그, 해제 불가·상속됨). `ubuntu`의 대화형 SSH sudo는 그대로 → 잠금 위험 0, 드롭인 삭제로 즉시 가역.
+- 실증: `systemd-run --uid=ubuntu -p NoNewPrivileges=yes … sudo -n true` → `sudo: The "no new privileges" flag is set…` exit 1. 대조군(속성 없음)은 성공. 적용 후 MainPID `/proc/<pid>/status`에 `NoNewPrivs: 1`.
+- 안전성: 배포 워크플로는 sudo를 전혀 사용하지 않는다(docker/tar/curl/gh만). 러너 `busy=false` 확인 후 재시작, GitHub 측 `status=online` 복귀 확인.
+- **잔여 리스크(제거 불가)**: 러너가 `docker` 그룹에 있어 docker 소켓 경유 root 등가성은 어떤 방식으로도 남는다. 이 조치는 심층 방어다.
+
+### 4. swap 4GB 추가 — 게이트 동시 실행 시 프로덕션 OOM 사망 방지
+
+게이트는 같은 호스트에 **두 번째 Open WebUI 인스턴스**를 띄운다. 조치 전 상태는 `total 7,816MB / available 1,194MB / swap 0`이고 프로덕션 컨테이너는 `Memory=0`(상한 없음)에 RSS 3.45GiB였다. 이 상태에서 host OOM killer가 작동하면 **RSS가 가장 큰 프로덕션을 선택**한다.
+
+`/swapfile` 4GiB 생성·활성화(`fallocate` → `mkswap` → `swapon`, 0600), `/etc/fstab`에 `/swapfile none swap sw 0 0` 등록(사전 백업 `/etc/fstab.bak-*`, `findmnt --verify` 경고만·오류 없음, `systemctl daemon-reload` 후 `swapfile.swap` active). 무중단·즉시 가역(`swapoff`). `vm.swappiness`는 기본 60 유지 — 필요하면 10으로 낮추는 것이 선택적 후속이다.
+
+### 5. ⚠️ `scripts/local-test.sh`의 프로덕션 파괴 결함 수정
+
+**발견**: 스크립트가 compose를 `-p` 없이 호출하고 `COMPOSE_PROJECT_NAME`도 설정하지 않는다. compose는 프로젝트명을 **프로젝트 디렉터리명**에서 유도하므로, 운영 체크아웃(`/home/ubuntu/openwebui`)에서 실행하면 프로젝트가 `openwebui`로 해석된다. 프로덕션은 `-p openwebui`이고 **서비스명(`openwebui`, `pipelines`)까지 동일**하다.
+
+읽기 전용 `ps`로 증명했다 — 게이트 compose가 프로덕션 컨테이너를 자기 서비스로 인식했다:
+
+```
+openwebui-openwebui-1   service=openwebui   v0.11.3-kwh.1   running   ← 프로덕션
+openwebui-pipelines-1   service=pipelines                   exited    ← 프로덕션
+프로젝트명: openwebui  (프로덕션 라벨 com.docker.compose.project=openwebui 와 동일)
+```
+
+따라서 이 디렉터리에서는 `--down`(L158)이 **프로덕션 컨테이너와 네트워크를 삭제**하고, `up -d`(L536)가 **프로덕션을 게이트 스펙으로 재생성**하며, L465–467의 "openwebui가 떠 있으면 down" 분기가 프로덕션에 적용된다. 지금까지 사고가 없었던 이유는 가드가 아니라 **worktree에서 실행해 프로젝트명이 달라졌기 때문**이다(검증함) — 실행 디렉터리에 따라 결과가 갈리는 구조였다.
+
+**수정**: `COMPOSE_PROJECT_NAME="${OPENWEBUI_LOCAL_TEST_PROJECT:-openwebui-local-test}"`를 상단에서 export(스크립트 내 모든 compose 호출이 상속)하고, 프로젝트명이 `openwebui`로 해석되면 **exit 2로 거부**하는 가드를 추가했다. `[FAIL]` 안내 문구의 `docker compose` 예시에도 `-p`를 넣었다.
+
+검증: `bash -n` OK / 가드 강제 시 exit 2 / 수정본으로 `--down` 실행 후 프로덕션 `StartedAt` 불변·healthy·`/health` 200 / 게이트 프로젝트의 `compose ps`는 공집합. RC 이미지 유효성에는 영향 없다 — `local-test.sh`는 런타임 이미지에 포함되지 않는다(최종 스테이지는 `/app/build`와 `./backend`만 COPY).
+
+### 6. §8 재개 지점 정정
+
+§8.1의 "로컬 게이트 컨테이너가 떠 있다"는 **현재 사실과 다르다**. 컨테이너도 `:8082` 리스너도 없고 RC 이미지(5.09GB)도 로컬에 없다. 브라우저 수동 체크리스트는 **게이트를 처음부터 다시 띄워야** 이어갈 수 있다(이미지 pull 3~8분 + 자동 게이트 2~9분).
+
+### 7. 이 섹션에서 바뀐 것
+
+| 대상           | 값                                                                                        |
+| -------------- | ----------------------------------------------------------------------------------------- |
+| GitHub ruleset | 22414966 / 22414967 / 22414968 (신설)                                                     |
+| 호스트         | `/swapfile` 4GiB + fstab 항목, 러너 드롭인 `10-hardening.conf`                            |
+| 코드           | `scripts/local-test.sh` — 프로젝트 격리 + 가드                                            |
+| 로컬 브랜치    | `wip/workspace-snapshot-20260907` (`cf6ed8c2b`, push 안 함)                               |
+| 미결           | 고유 문서 9건 승격 여부, `vm.swappiness` 조정 여부, 게이트 컨테이너 메모리 상한 부여 여부 |
