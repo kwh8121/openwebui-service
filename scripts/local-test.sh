@@ -56,6 +56,23 @@ ENV_TEMPLATE="${REPO_ROOT}/.env.local-test.template"
 ENV_FRESH_TEMPLATE="${REPO_ROOT}/.env.local-test.fresh.template"
 ENV_FILE_DEFAULT="${REPO_ROOT}/.env.local-test"
 
+# --- Compose project isolation (MUST NOT touch production) ---------------
+# Production runs `docker compose -p openwebui -f docker-compose.deploy.yaml`
+# with the same service names (`openwebui`, `pipelines`) this gate uses. With no
+# explicit project name compose derives one from the project directory, so
+# running this script from the production checkout (/home/ubuntu/openwebui)
+# resolved to project `openwebui` and made every `up -d` / `down` here operate
+# on the PRODUCTION containers. Exported once so all `docker compose`
+# invocations in this script inherit it.
+COMPOSE_PROJECT_NAME="${OPENWEBUI_LOCAL_TEST_PROJECT:-openwebui-local-test}"
+export COMPOSE_PROJECT_NAME
+if [[ "$COMPOSE_PROJECT_NAME" == "openwebui" ]]; then
+  echo "ERROR: compose project 'openwebui' is the production stack." >&2
+  echo "       Refusing to run — this would stop or recreate production containers." >&2
+  echo "       Unset OPENWEBUI_LOCAL_TEST_PROJECT or choose another project name." >&2
+  exit 2
+fi
+
 DEFAULT_DATA_DIR="${HOME}/openwebui-local-test-data"
 DEFAULT_PIPELINES_DIR="${HOME}/openwebui-local-test-pipelines"
 DEFAULT_PORT=8082
@@ -703,8 +720,8 @@ not a broken image — re-run with a larger --health-timeout before concluding
 the release is defective. Never re-tag or rebuild an immutable tag to "fix" it.
 
 Inspect logs:
-  docker compose -f docker-compose.local-test.yaml logs openwebui
-  docker compose -f docker-compose.local-test.yaml logs pipelines
+  docker compose -p ${COMPOSE_PROJECT_NAME} -f docker-compose.local-test.yaml logs openwebui
+  docker compose -p ${COMPOSE_PROJECT_NAME} -f docker-compose.local-test.yaml logs pipelines
 Teardown:
   ./scripts/local-test.sh --down
 EOF
