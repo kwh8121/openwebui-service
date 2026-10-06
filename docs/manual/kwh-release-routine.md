@@ -362,14 +362,14 @@ git tag -l 'v*-kwh.*' | sort -V | tail -5
 
 ## 12. upstream 대비 divergence (현행 인벤토리)
 
-향후 upstream 병합에서 무엇이 충돌할지 운영자가 알 수 있도록 여기에 유지합니다. 줄번호는 `v0.11.3` 병합 트리 기준입니다.
+향후 upstream 병합에서 무엇이 충돌할지 운영자가 알 수 있도록 여기에 유지합니다. 줄번호는 `v0.11.4` 병합 트리 기준입니다 (v0.11.3 대비 이동: Chat.svelte 910→926, InterfaceSettings 59/340→60/341, env.py 936→951, Dockerfile 31→34).
 
 | 파일                                                        | 줄       | 변경 내용                                                                                                                                            | 도입                        |
 | ----------------------------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
-| `src/lib/components/chat/Chat.svelte`                       | 910      | `insertSuggestionPrompt` 기본값 `?? false` → `?? true` (제안 카드 클릭 시 자동 전송 방지)                                                            | `c68c745d2` (v0.10.2-kwh.2) |
-| `src/lib/components/common/InterfaceSettings.svelte`        | 59, 340  | `= false` / `?? false` → `= true` / `?? true` (Chat.svelte 기본값과 일치). 파일 경로는 upstream 리팩터로 `chat/Settings/Interface.svelte`에서 이동됨 | `c68c745d2` (v0.10.2-kwh.2) |
-| `backend/open_webui/env.py`                                 | 936 직후 | upstream의 `if WEBUI_NAME != 'Open WebUI': WEBUI_NAME += ' (Open WebUI)'` 2줄 삭제                                                                   | `4cbd9a061` (v0.10.2-kwh.2) |
-| `Dockerfile`                                                | 31       | `ENV NODE_OPTIONS="--max-old-space-size=6144"` 주석 해제·상향 (프론트 빌드 OOM 방지)                                                                 | v0.10.2 사이클              |
+| `src/lib/components/chat/Chat.svelte`                       | 926      | `insertSuggestionPrompt` 기본값 `?? false` → `?? true` (제안 카드 클릭 시 자동 전송 방지)                                                            | `c68c745d2` (v0.10.2-kwh.2) |
+| `src/lib/components/common/InterfaceSettings.svelte`        | 60, 341  | `= false` / `?? false` → `= true` / `?? true` (Chat.svelte 기본값과 일치). 파일 경로는 upstream 리팩터로 `chat/Settings/Interface.svelte`에서 이동됨 | `c68c745d2` (v0.10.2-kwh.2) |
+| `backend/open_webui/env.py`                                 | 951 직후 | upstream의 `if WEBUI_NAME != 'Open WebUI': WEBUI_NAME += ' (Open WebUI)'` 2줄 삭제                                                                   | `4cbd9a061` (v0.10.2-kwh.2) |
+| `Dockerfile`                                                | 34       | `ENV NODE_OPTIONS="--max-old-space-size=6144"` 주석 해제·상향 (프론트 빌드 OOM 방지)                                                                 | v0.10.2 사이클              |
 | `static/static/*` + `backend/open_webui/static/*`           | —        | Koreatimes 브랜드 자산 (12개 파일 × 2개 디렉터리)                                                                                                    | `171e0f742` (v0.10.2-kwh.2) |
 | `.github/workflows/docker.yaml`                             | —        | upstream 멀티아치·멀티배리언트 매트릭스를 fork 전용 최소 GHCR 워크플로로 전면 대체 (366줄 삭제)                                                      | fork 소유                   |
 | `.github/workflows/release-pypi.yml`, `release.yml`         | —        | `.disabled`로 rename해 비활성화 (PyPI/release publish 차단)                                                                                          | fork 소유                   |
