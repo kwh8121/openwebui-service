@@ -1,6 +1,6 @@
 # GitHub Control Plane: Local Development Agent Handoff
 
-**Protocol version: v1.2** (2026-07-31)
+**Protocol version: v1.2.1** (2026-10-07)
 
 이 문서는 로컬 WSL 개발 에이전트와 원격 프로덕션 배포 에이전트가 GitHub을 유일한 조율 표면으로 삼아 릴리스·배포·상태 정보를 교환하는 규약이다. 관리자가 두 터미널 사이에서 각 에이전트의 응답을 복사·붙여넣기하는 부담을 제거하는 것이 목적이다.
 
@@ -17,14 +17,14 @@
 
 이 프로토콜은 아래 인프라가 준비된 상태에서 완전 작동한다. 실제 릴리스 시 항목이 누락돼 있으면 중단하고 관리자 확인을 받는다.
 
-| 요건                                                                                | 위치                                                          | v1.2 시점 상태                                                                                                                 |
-| ----------------------------------------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `production` GitHub Environment (required reviewer: `kwh8121`)                      | GitHub repo → Environments                                    | ✅ 존재 (2026-07-30 생성)                                                                                                      |
-| Per-release deploy guide 파일                                                       | `docs/manual/kwh-deploy-guide-v<X.Y.Z>-kwh.<N>.md`            | ✅ 예시 인스턴스 `v0.11.0-kwh.1` 존재                                                                                          |
-| GHCR image build workflow                                                           | `.github/workflows/docker.yaml` (trigger: `v*-kwh.*` tag)     | ✅ 존재                                                                                                                        |
-| `Deploy approved production release` workflow                                       | `.github/workflows/deploy-approved-production-release.yaml`   | ✅ v1.2에서 신설. `workflow_dispatch` 입력: `tag`, `issue_number`, `guide_commit`. Environment=`production` 바인딩.            |
-| **Production deployment request** Issue form                                        | `.github/ISSUE_TEMPLATE/production_deployment_request.yaml`   | ✅ v1.2에서 신설. 라벨 `production-deploy`, 필수 필드가 §"배포 요청 계약" 스키마와 1:1 대응.                                   |
-| self-hosted runner (production Environment 바인딩, labels `self-hosted,production`) | 프로덕션 호스트 (`/home/ubuntu/openwebui`에 접근 가능한 계정) | ✅ `openwebui-prod-runner` 등록 완료 (2026-07-31). labels: `self-hosted`, `Linux`, `X64`, `production`; systemd 서비스 active. |
+| 요건                                                                                | 위치                                                          | v1.2 시점 상태                                                                                                                         |
+| ----------------------------------------------------------------------------------- | ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `production` GitHub Environment (required reviewer: `kwh8121`)                      | GitHub repo → Environments                                    | ✅ 존재 (2026-07-30 생성)                                                                                                              |
+| Per-release deploy guide 파일                                                       | `docs/manual/kwh-deploy-guide-v<X.Y.Z>-kwh.<N>.md`            | ✅ 예시 인스턴스 `v0.11.0-kwh.1` 존재                                                                                                  |
+| GHCR image build workflow                                                           | `.github/workflows/docker.yaml` (trigger: `v*-kwh.*` tag)     | ✅ 존재                                                                                                                                |
+| `Deploy approved production release` workflow                                       | `.github/workflows/deploy-approved-production-release.yaml`   | ✅ v1.2에서 신설. `workflow_dispatch` 입력: `tag`, `issue_number`, `guide_commit`, `check_pipelines`. Environment=`production` 바인딩. |
+| **Production deployment request** Issue form                                        | `.github/ISSUE_TEMPLATE/production_deployment_request.yaml`   | ✅ v1.2에서 신설. 라벨 `production-deploy`, 필수 필드가 §"배포 요청 계약" 스키마와 1:1 대응.                                           |
+| self-hosted runner (production Environment 바인딩, labels `self-hosted,production`) | 프로덕션 호스트 (`/home/ubuntu/openwebui`에 접근 가능한 계정) | ✅ `openwebui-prod-runner` 등록 완료 (2026-07-31). labels: `self-hosted`, `Linux`, `X64`, `production`; systemd 서비스 active.         |
 
 **Interim mode 정의 (예외 fallback)**: runner가 offline이거나 GitHub Actions 인프라 장애로 workflow를 실행할 수 없을 때만 사람 프로덕션 에이전트가 §"필수 릴리스 흐름"과 per-release deploy guide를 따라 수동 실행한다. 정상 상태에서는 workflow가 동일 동작을 실행하고 Issue에 자동 코멘트를 게시하며, 사람 에이전트 개입은 승인·실패 조사·수정 시에만 필요하다.
 
@@ -226,15 +226,15 @@ Release accepted. <!-- 또는 --> Release rejected: <이유>
 
 ## 상태 인지
 
-로컬 개발 에이전트의 1차 상태 정보원은 GitHub deployment Issue와 Actions run이다.
+새 세션은 기억 서비스나 이전 채팅을 현재 상태의 근거로 삼지 않는다. **GitHub deployment Issue·Actions가 현재 배포 승인·결과의 정본**이고, 커밋된 `AGENTS.md`·`docs/manual/`·`docs/plan/`·`docs/jobs/`가 절차와 이력의 정본이다. 배포 에이전트는 작업 시작 시 아래 조회를 직접 수행하며, `gh`에는 항상 `--repo kwh8121/openwebui-service`를 지정한다.
 
-1. **관리자 relay (필수 액션)**: 관리자는 프로덕션 에이전트가 §3(성공) 또는 §4(실패) 코멘트를 남긴 뒤, 로컬 개발 에이전트 세션 재개 시 다음 중 하나를 채팅에 붙여넣는다.
-   - (a) deployment Issue URL, 또는
-   - (b) 해당 Issue 코멘트 verbatim
-     이 relay가 프로토콜에서 유일하게 남는 관리자의 chat 액션이다. 나머지 명령·응답 relay는 모두 GitHub Issue와 Actions로 흡수된다.
-2. 로컬 개발 에이전트는 해당 Issue와 Actions 결과를 기준으로 hotfix, 다음 kwh 릴리스, 또는 후속 기능 작업을 결정한다.
-3. 세션 종료 뒤에는 ScheduleWakeup, 장시간 polling, 또는 로컬 세션 유지에 의존하지 않는다.
-4. 확실히 유지되는 15분 이하의 짧은 배포 세션에서만 단기 polling을 예외적으로 사용할 수 있다.
+1. 원격 `main`과 로컬 `origin/main` SHA, 열린 integration PR·CI, 최종 tag와 GHCR build run을 읽기 전용으로 확인한다. 로컬 ref와 원격 SHA가 다르면 로컬 파일을 최신 커밋 문서라고 단정하지 않는다.
+2. `production-deploy` Issue 목록에서 대상 tag의 **열린 요청** 또는 가장 최근 **완료된 배포**를 찾고, Issue 본문·소유자 승인·Actions run·결과 코멘트를 직접 조회한다. 대상이 여러 개이거나 증적이 없으면 `UNKNOWN`으로 표시하고 임의로 선택하지 않는다. 이전 jobs log나 승인되지 않은 계획 초안은 배포 권한이 아니다.
+3. 프로덕션 에이전트는 실제 컨테이너 이미지·건강 상태·Pipelines 상태·데이터 mount·백업·디스크 여유를 현재 시각에 다시 조회한다. 배포 전용 머신에서 개발 게이트나 이미지 빌드를 재실행하지 않는다. `READY | BLOCKED | UNKNOWN`의 이유와 UTC 관측 시각·출처를 보고하며, 필수 증적이 없으면 workflow dispatch와 서비스 stop을 진행하지 않는다. 실행별 GitHub `production` Environment 승인은 dispatch 후 별도로 필요하다.
+4. 로컬 개발 에이전트도 세션 재개 시 GitHub Issue·Actions를 직접 읽고 hotfix, 다음 kwh 릴리스, 후속 기능 작업을 판단한다. **관리자 채팅 relay는 필수가 아니다.** GitHub 접근 실패나 동일 tag의 모호한 Issue처럼 직접 식별할 수 없는 경우에만 Issue URL 등 부족한 식별자를 요청한다.
+5. 세션 종료 뒤에는 ScheduleWakeup, 장시간 polling, 또는 로컬 세션 유지에 의존하지 않는다. 확실히 유지되는 15분 이하의 짧은 배포 세션에서만 단기 polling을 예외적으로 사용할 수 있다.
+
+이 v1.2.1 보완은 세션 시작의 정보 조회 경로만 바꾼다. v1.2의 Issue 스키마, workflow 입력, Environment 승인·장애 권한은 그대로 유지한다. 현재 `.opencode` 증적 파서는 실제 배포 Issue/run/container 형식에 맞지 않고, 읽기 전용 명령 범위에도 승인 댓글·Pipelines·mount·백업·디스크 점검이 빠져 있다. 별도 회귀 시험과 명령 범위 보완 전에는 자동 `READY` 판정을 주장하지 않는다.
 
 ## 로컬 에이전트 handoff 메시지
 
@@ -279,7 +279,7 @@ Browser checks required after deployment: OAuth, real model chat, upload/RAG, br
 
 ## 버전 관리 (Versioning)
 
-**Protocol version**: v1.2 (2026-07-31)
+**Protocol version**: v1.2.1 (2026-10-07)
 
 **호환**:
 
@@ -297,6 +297,7 @@ Browser checks required after deployment: OAuth, real model chat, upload/RAG, br
 
 **Changelog**:
 
+- **2026-10-07 (v1.2.1)**: 상태 인지를 GitHub Issue·Actions와 커밋된 저장소 문서의 직접 조회로 변경했다. 관리자 채팅 relay를 예외 복구 경로로 낮추고, 배포 전용 머신의 현재 런타임 재조회와 `READY | BLOCKED | UNKNOWN` 판정을 명시했다. 배포 Issue·workflow 승인 계약은 v1.2와 동일하다.
 - **2026-07-31 (v1.2)**:
   - `.github/workflows/deploy-approved-production-release.yaml` 신설 (PR #11) 후 하드닝 (PR #12) → main 승격 (PR #13). `workflow_dispatch` 입력(`tag`, `issue_number`, `guide_commit`, `check_pipelines`) + `environment: production` (required reviewer 게이트 자동 발동) + `runs-on: [self-hosted, production]`. 실행 순서: 검증 → dispatched 코멘트 → 현재 이미지 캡처 → pull → WAL-safe 백업 → checkpoint 코멘트 → 새 이미지 up → health/version/manifest/Pipelines API 검증 → 로그 스캔 → success/failure 코멘트 자동 게시. `check_pipelines=false`는 Pipelines가 의도적으로 중지된 경우에만 허용하며 Issue에 결정 근거를 기록한다. **PR #12 하드닝으로 추가된 검증 항목 (미충족 시 dispatch 거부)**:
     1. **Tag format**: `^v[0-9]+\.[0-9]+\.[0-9]+-kwh\.[0-9]+$` 정규식 강제 (RC·`main`·`latest` 거부).

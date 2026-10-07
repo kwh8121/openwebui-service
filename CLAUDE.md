@@ -6,6 +6,8 @@ Claude Code가 세션 시작 시 이 파일을 자동으로 읽습니다. 이 �
 
 ## 로컬 환경 — 반드시 먼저 알 것
 
+`/home/ubuntu/openwebui`는 배포 전용 호스트입니다. 아래 Node·npm·로컬 게이트 안내는 개발 머신에서만 사용하며, 이 호스트의 배포 세션은 `AGENTS.md` §"머신 역할"과 최상위 handoff 규약의 상태 인지 절차를 먼저 따릅니다.
+
 - **로컬에서 `npm run build`를 실행하지 않습니다.** 이 개발 PC(7 GB RAM)는 `vite build`가 heap OOM으로 실패합니다. 빌드 권위는 **GitHub Actions**(`v*-kwh.*` 태그 트리거)이며, `scripts/local-test.sh`가 그 결과 이미지를 검증합니다.
 - **Node는 `nvm use 22`**로 전환 후 사용합니다 (프로젝트 engine-strict `<=22.x`, 기본 PATH에는 Node 24가 잡혀 있음).
 - **`gh` 명령에는 항상 `--repo kwh8121/openwebui-service`를 붙입니다.** `upstream` 리모트 때문에 `gh`가 기본적으로 upstream 저장소를 가리켜 PR 생성이 실패합니다.
@@ -15,7 +17,7 @@ Claude Code가 세션 시작 시 이 파일을 자동으로 읽습니다. 이 �
 
 ## 데이터 위치 원칙 (요약)
 
-**One Fact, One Home** (2026-08-11 채택): Linear = 지금 할 일 (in-flight 계획·검증·상태) · jobs log = 오늘 실제로 한 일 · `docs/plan/` = 확정된 개발·리뷰 계획 (Linear plan-approved 이후 승격) · `docs/references/` = upstream Open WebUI 버전·기능 참고자료 · OpenViking = 다음 에이전트가 읽을 기억 (watch 대상: `docs/jobs/`, `docs/manual/`, `docs/plan/`, `docs/references/`, `AGENTS.md`, `CLAUDE.md`) · mem0 = 프로젝트 밖 개인 선호 (auto-capture 결과는 참고 캐시, 진실 소스 아님). `docs/manual/` vs `docs/references/` 경계 = fork-specific vs upstream. 전체 매트릭스와 promotion path는 `AGENTS.md` §"데이터 위치 원칙 — One Fact, One Home".
+**One Fact, One Home** (2026-08-11 채택, 배포 세션 조회 경로 2026-10-07 보완): Linear = 개발 작업판 · GitHub Issue·Actions = 현재 배포 승인·결과 · jobs log = 실제 작업 이력 · `docs/plan/` = 확정된 계획 · `docs/manual/` = 운영 절차 · `docs/references/` = upstream 참고자료 · mem0 = 프로젝트 밖 개인 선호. 다음 배포 세션은 커밋된 문서를 Git에서 직접 읽고 GitHub·현재 컨테이너를 재조회합니다. 외부 기억 서비스는 배포 절차의 의존성이 아닙니다. 단, **개발 에이전트 환경에서는 OpenViking을 기존대로 활용**합니다(watch 대상: `docs/jobs/`, `docs/manual/`, `docs/plan/`, `docs/references/`, `AGENTS.md`, `CLAUDE.md`). 배포 호스트만 OpenViking을 쓰지 않습니다. 전체 매트릭스는 `AGENTS.md` §"데이터 위치 원칙 — One Fact, One Home".
 
 ## 개발·릴리스 워크플로 — 5단계
 
@@ -23,7 +25,7 @@ Claude Code가 세션 시작 시 이 파일을 자동으로 읽습니다. 이 �
 
 ## 프로덕션 릴리스 루틴 (한눈에)
 
-5단계(프로덕션으로 향하는 모든 코드·자산 변경)용 요약입니다. 상세는 `docs/manual/kwh-release-routine.md`, 협업 규약(최상위 권위)은 `docs/manual/github-control-plane-local-agent-handoff.ko.md`(Protocol v1.2), CI/CD 메커니즘은 `docs/manual/github-actions-ghcr-release-deployment.md`.
+5단계(프로덕션으로 향하는 모든 코드·자산 변경)용 요약입니다. 상세는 `docs/manual/kwh-release-routine.md`, 협업 규약(최상위 권위)은 `docs/manual/github-control-plane-local-agent-handoff.ko.md`(Protocol v1.2.1), CI/CD 메커니즘은 `docs/manual/github-actions-ghcr-release-deployment.md`.
 
 1. **복구 가드**: 커스터마이징을 실수로 `main`에 커밋했다면, 그 SHA에서 `feature/<slug>` 브랜치를 만들고 → `git reset --hard origin/main` → `integration/vX.Y.Z`로 `--no-ff` 병합. (2026-07-22 커밋 `c68c745d2`로 검증됨.)
 2. **feature 브랜치**: `git checkout integration/vX.Y.Z && git pull && git checkout -b feature/<slug>`; 커밋; 이후 `git checkout integration/vX.Y.Z && git merge --no-ff feature/<slug>`.
@@ -34,7 +36,7 @@ Claude Code가 세션 시작 시 이 파일을 자동으로 읽습니다. 이 �
 6. **PR** `integration/vX.Y.Z` → `main`; `--merge` 방식으로 병합; 로컬 `main` 동기화 (`git fetch && git checkout main && git pull --ff-only`).
 7. **최종 태그**를 병합된 main tip에 발행: `git tag -a vX.Y.Z-kwh.N <sha> -m "..."` → push → GH Actions가 프로덕션 이미지 빌드.
 8. **로컬 게이트 재실행 (최종 태그)**: `./scripts/local-test.sh vX.Y.Z-kwh.N`. 동일한 축적 데이터로 2차 게이트. 5번의 기동 시간 주의가 동일하게 적용됩니다.
-9. **프로덕션 배포는 GitHub Issue 핸드오프로 수행합니다.** `Production deployment request` Issue를 제출하고(Protocol v1.2 §"배포 요청 계약"), 릴리스별 배포 가이드 `docs/manual/kwh-deploy-guide-vX.Y.Z-kwh.N.md`를 함께 커밋합니다. opencode 프로덕션 에이전트가 `deploy-approved-production-release.yaml` 워크플로로 실행하며, 이 워크플로가 SQLite WAL-safe 백업·이미지 pin·`--no-deps` 재기동·스모크를 자동 수행합니다. **로컬 에이전트가 프로덕션에 직접 SSH 배포하지 않습니다.**
+9. **프로덕션 배포는 GitHub Issue 핸드오프로 수행합니다.** `Production deployment request` Issue를 제출하고(Protocol v1.2.1 §"배포 요청 계약"), 릴리스별 배포 가이드 `docs/manual/kwh-deploy-guide-vX.Y.Z-kwh.N.md`를 함께 커밋합니다. opencode 프로덕션 에이전트가 `deploy-approved-production-release.yaml` 워크플로로 실행하며, 이 워크플로가 SQLite WAL-safe 백업·이미지 pin·`--no-deps` 재기동·스모크를 자동 수행합니다. **로컬 에이전트가 프로덕션에 직접 SSH 배포하지 않습니다.**
 10. **모든 변경(문서 포함)**은 동일 흐름을 따릅니다: `feature/*` → `integration/vX.Y.Z` → PR → `main`. `feature/docs-*` → `main` 직행 단축 경로는 **폐지되었습니다** (2026-07-31). 문서 전용 변경은 새 태그나 이미지 재빌드가 필요 없습니다.
 
 **매 세션 반드시** 그날의 작업을 `docs/jobs/YYYY-MM-DD-openwebui-jobs.md`에 기록합니다 (같은 날은 append, 날짜가 바뀌면 새 파일). 시작 전 이전 날짜 로그를 확인해 작업 중복을 피합니다.
