@@ -35,6 +35,12 @@ const readOnlyGit = (command) =>
 	);
 
 const readOnlyGitHub = (command) =>
+	command === `gh pr list --repo ${REPOSITORY} --state open` ||
+	command ===
+		`gh issue list --repo ${REPOSITORY} --label production-deploy --state all --limit 100` ||
+	command ===
+		`gh run list --repo ${REPOSITORY} --workflow deploy-approved-production-release.yaml --limit 20` ||
+	command === `gh run list --repo ${REPOSITORY} --workflow docker.yaml --limit 20` ||
 	new RegExp(`^gh issue view --repo ${REPOSITORY} \\d+ --json state,number,url,title,body$`).test(
 		command
 	) ||

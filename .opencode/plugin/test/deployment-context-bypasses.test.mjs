@@ -55,6 +55,8 @@ test('정확한 읽기 전용 allowlist의 변형은 실행하지 않는다', as
 	const guard = createGuard();
 	const nearMisses = [
 		'gh issue list --repo kwh8121/openwebui-service',
+		'gh issue list --repo kwh8121/openwebui-service --label production-deploy --state open --limit 100',
+		'gh run list --repo kwh8121/openwebui-service --workflow docker.yaml --limit 200',
 		'docker inspect other --format={{json .}}',
 		'git diff --output=/tmp/diff.txt'
 	];

@@ -10,7 +10,14 @@ export const CONTEXT_CLASSIFICATION = Object.freeze({
 });
 
 const AUTHORITY_SOURCES = new Set(['github', 'origin-main', 'current-runtime']);
-const HISTORY_SOURCES = new Set(['docs/jobs', 'openviking']);
+const HISTORY_SOURCES = new Set([
+	'docs/jobs',
+	'docs/manual',
+	'docs/plan',
+	'docs/references',
+	'AGENTS.md',
+	'CLAUDE.md'
+]);
 
 export const classifyContextSource = (source) => {
 	if (AUTHORITY_SOURCES.has(source)) {
