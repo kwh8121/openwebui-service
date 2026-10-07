@@ -62,3 +62,9 @@
 
 - 사용자는 현재 v0.11.4 최종 릴리스 준비를 진행 중인 개발 세션이 없다고 확인했고, 개발 에이전트가 바로 이어받도록 관련 사항을 Git에 남기라고 지시했다.
 - 별도 `feature/v0114-release-handoff` 작업 트리에 `docs/manual/kwh-release-handoff-v0.11.4-kwh.1.md`를 작성했다. 이 문서는 07:55 UTC 이후 희망 일정과 실제 `BLOCKED` 사유, 개발 머신의 릴리스 준비 순서, 배포 머신의 재판정/중단 조건을 담는다. 앞서 검토한 OpenViking 대체·세션 인계 문서/플러그인 변경도 같은 feature 브랜치에 옮겨 검증 후 push한다. 배포 승인이나 새 저중단 workflow 구현으로 취급하지 않는다.
+
+## 05:26 UTC — Git 핸드오프 전달 결과
+
+- 별도 작업 트리 `/tmp/openwebui-v0114-handoff`의 `feature/v0114-release-handoff`에 커밋 `fff96648be8827bbebba03c325f8bf2be8519348`을 만들고 `origin`에 push했다. [draft PR #42](https://github.com/kwh8121/openwebui-service/pull/42)는 `integration/v0.11.4`를 대상으로 한다. CLA 확인란은 사용자를 대신해 체크하지 않았다.
+- 커밋에는 개발 핸드오프 문서, 이 작업일지, OpenViking 대체를 위한 권위 문서/Issue form/OpenCode 분류·조회 변경만 포함했다. 미추적 `.omo/`, `.opencode/opencode.json`, `.opencode/mem0-mcp.cjs`와 무시된 `.omx/` 초안 계획, 운영 비밀값·데이터는 포함하지 않았다.
+- 검증: OpenCode 플러그인 테스트 21/21 통과, 변경 문서/Issue form의 직접 Prettier 검사 통과, staged diff 공백 검사 통과, 비밀값 패턴 0건. 이 검증은 실제 #31 증적 파서·새 백업 복원·120초 중단을 입증하지 않는다. PR은 **draft**이며 배포 승인이나 main 반영이 아니다.
