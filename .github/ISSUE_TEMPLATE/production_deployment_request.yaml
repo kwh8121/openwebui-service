@@ -1,13 +1,13 @@
 name: Production deployment request
 description: Request approval + execution of a production deploy for an immutable kwh release tag. Consumed by the production deployment agent per the handoff protocol.
-title: "Production deployment request: v"
+title: 'Production deployment request: v'
 labels:
   - production-deploy
 body:
   - type: markdown
     attributes:
       value: |
-        Read `docs/manual/github-control-plane-local-agent-handoff.ko.md` (v1.2) — §"배포 요청 계약" — before submitting.
+        Read `docs/manual/github-control-plane-local-agent-handoff.ko.md` (v1.2.1) — §"배포 요청 계약" — before submitting.
 
         **Never include** OAuth credentials, package tokens, API keys, DB contents, cookies, or user data anywhere in this Issue.
 

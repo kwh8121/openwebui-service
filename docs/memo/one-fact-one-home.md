@@ -1,4 +1,6 @@
-# One Fact, One Home — openwebui-service 개발·리뷰·배포 흐름 요약
+# One Fact, One Home — 2026-08 개발·리뷰·배포 흐름 기록
+
+> **2026-10-07 배포 세션 인계 변경:** 아래 내용 전체는 2026-08 당시의 기록이며, OpenViking watch·mem0 프로젝트 포인터와 다음 세션 안내는 현행 배포 절차가 아니다. 현재 배포 세션은 `AGENTS.md`와 `docs/manual/github-control-plane-local-agent-handoff.ko.md` Protocol v1.2.1에 따라 GitHub Issue·Actions 및 커밋된 저장소 문서를 직접 조회한다. 이 메모는 배포 절차의 권위 문서가 아니다.
 
 작성 목적: 사용자가 이 프로젝트(`~/projects/openwebui-service`)의 계획→개발→리뷰→배포 전체 흐름과 이를 뒷받침하는 하네스 구성을 **단일 파일로 이해**하기 위한 요약. 상세 규약은 각 참조 문서에 있고, 이 문서는 색인 겸 개괄임.
 

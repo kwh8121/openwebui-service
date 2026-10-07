@@ -77,6 +77,16 @@ test('Mem0는 권위 증적으로 분류되지 않는다', () => {
 	assert.equal(classification, CONTEXT_CLASSIFICATION.UNRESOLVED);
 });
 
+test('사용할 수 없는 OpenViking은 배포 이력 출처로 분류하지 않는다', () => {
+	assert.equal(classifyContextSource('openviking'), CONTEXT_CLASSIFICATION.UNRESOLVED);
+});
+
+test('커밋된 프로젝트 문서는 배포 승인과 구분된 이력 출처로 분류한다', () => {
+	for (const source of ['docs/manual', 'docs/plan', 'docs/references', 'AGENTS.md', 'CLAUDE.md']) {
+		assert.equal(classifyContextSource(source), CONTEXT_CLASSIFICATION.HISTORY);
+	}
+});
+
 test('증적 없는 새 세션은 분류된 프로덕션 변경을 차단한다', async () => {
 	// Given: a root session with no in-memory evidence.
 	const { guard } = createHarness();
@@ -93,6 +103,18 @@ test('읽기 전용 조회와 feature 브랜치 push는 증적 없이 허용한�
 
 	for (const command of fixtures.allowedWithoutEvidence) {
 		// When / Then: non-production work passes the before hook.
+		await assert.doesNotReject(runBefore(guard, ROOT_SESSION, command));
+	}
+});
+
+test('새 세션은 배포 요청과 Actions 실행을 승인 없이 읽기 전용으로 발견한다', async () => {
+	const { guard } = createHarness();
+	for (const command of [
+		'gh pr list --repo kwh8121/openwebui-service --state open',
+		'gh issue list --repo kwh8121/openwebui-service --label production-deploy --state all --limit 100',
+		'gh run list --repo kwh8121/openwebui-service --workflow deploy-approved-production-release.yaml --limit 20',
+		'gh run list --repo kwh8121/openwebui-service --workflow docker.yaml --limit 20'
+	]) {
 		await assert.doesNotReject(runBefore(guard, ROOT_SESSION, command));
 	}
 });

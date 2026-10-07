@@ -2,7 +2,7 @@
 
 > **범위**: 이 fork의 일상 릴리스 루틴을 세션 간에 참조하기 위한 실무 문서. 2026-07-22 `main` 직접 커밋 사고와 `v0.10.2-kwh.2`(Koreatimes 브랜드) 롤아웃 이후 정착된 워크플로를 명문화했습니다.
 >
-> **권위 순서**: 충돌 시 ① `docs/manual/github-control-plane-local-agent-handoff.ko.md`(Protocol v1.2, 릴리스·배포 협업 규약의 **최상위 권위**) → ② `docs/manual/github-actions-ghcr-release-deployment.md`(CI/CD 메커니즘) → ③ 본 문서(실무 절차) 순으로 우선합니다. 상위 문서와 어긋나면 본 문서를 고쳐 맞춥니다.
+> **권위 순서**: 충돌 시 ① `docs/manual/github-control-plane-local-agent-handoff.ko.md`(Protocol v1.2.1, 릴리스·배포 협업 규약의 **최상위 권위**) → ② `docs/manual/github-actions-ghcr-release-deployment.md`(CI/CD 메커니즘) → ③ 본 문서(실무 절차) 순으로 우선합니다. 상위 문서와 어긋나면 본 문서를 고쳐 맞춥니다.
 
 ## 1. 저장소 및 리모트 구성
 
@@ -283,7 +283,7 @@ grep -q '^WEBUI_NAME=' <env-file> \
 프로덕션 배포는 **GitHub를 통제 평면으로 삼아** 수행합니다. 로컬 에이전트가 프로덕션에 직접 SSH로 배포하지 않습니다.
 
 1. 로컬 에이전트가 릴리스별 배포 가이드 `docs/manual/kwh-deploy-guide-vX.Y.Z-kwh.N.md`를 작성해 커밋합니다. 템플릿 실례: `docs/manual/kwh-deploy-guide-v0.11.1-kwh.2.md`.
-2. `Production deployment request` Issue를 제출합니다 (스키마는 `docs/manual/github-control-plane-local-agent-handoff.ko.md` §"배포 요청 계약", Protocol v1.2).
+2. `Production deployment request` Issue를 제출합니다 (스키마는 `docs/manual/github-control-plane-local-agent-handoff.ko.md` §"배포 요청 계약", Protocol v1.2.1).
 3. 관리자가 `Environment` 승인을 수행합니다.
 4. opencode 프로덕션 에이전트가 `deploy-approved-production-release.yaml` 워크플로를 실행합니다. 이 워크플로가 자동 수행하는 것:
    - 태그 형식·계보·가이드·경로·현재 DB 상태 검증
@@ -348,17 +348,24 @@ git merge --no-ff feature/<slug> \
 
 ## 11. 세션 연속성
 
-- 작업 로그: `docs/jobs/YYYY-MM-DD-openwebui-jobs.md` (같은 날은 append)
-- 본 문서: 릴리스 루틴을 건드리는 모든 세션에서 참조
-- 영속 메모리(mem0/openviking): 본 문서를 가리키는 포인터가 `kwh8121-openwebui-service` 프로젝트 스코프에 존재
+- 작업 로그: `docs/jobs/YYYY-MM-DD-openwebui-jobs.md` (같은 날은 append, 다른 세션·머신에서 사용할 기록은 커밋)
+- 확정된 계획과 절차: 커밋된 `docs/plan/`, `docs/manual/`, `AGENTS.md`; 초안 `.omx/`와 미추적 파일은 공유 인계로 간주하지 않음
+- 현재 배포 승인·결과: GitHub `production-deploy` Issue와 Actions run을 직접 조회. 개인 기억 서비스는 배포 판단에 사용하지 않음
 
-세션 간 재개 시 다음으로 방향을 잡습니다(전체 이력을 읽지 않고).
+세션 간 재개 시 아래 명령으로 방향을 잡고, 최상위 규약 §"상태 인지"의 읽기 전용 개시 점검을 이어서 수행합니다. GitHub에 게시되지 않은 개발 머신의 로컬 게이트 결과는 `UNKNOWN`입니다.
 
 ```bash
-git status --short --branch
+git status --short
+git branch --show-current
 git log --oneline -5
-git tag -l 'v*-kwh.*' | sort -V | tail -5
+git ls-remote --exit-code origin refs/heads/main
+git rev-parse --verify origin/main
+gh issue list --repo kwh8121/openwebui-service --label production-deploy --state all --limit 100
+gh run list --repo kwh8121/openwebui-service --workflow deploy-approved-production-release.yaml --limit 20
+gh run list --repo kwh8121/openwebui-service --workflow docker.yaml --limit 20
 ```
+
+배포 머신은 이어서 실제 컨테이너·Pipelines·데이터 mount·백업·디스크를 재조회하고 관측 시각과 `READY | BLOCKED | UNKNOWN` 이유를 보고합니다. 위 목록은 탐색 시작점이며 특정 Issue나 run의 승인·성공을 대신하지 않습니다.
 
 ## 12. upstream 대비 divergence (현행 인벤토리)
 
