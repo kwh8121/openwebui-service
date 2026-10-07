@@ -148,3 +148,42 @@
 3. **#49**: 백업 권한 0600·env 보존·중단 시간 단축 설계. 복원 시험·3회 시간 리허설 후에만 "완전 복구" 주장.
 4. 로컬 게이트 컨테이너(8082)·브라우저 쿠키 정리(`./scripts/local-test.sh --down`).
 5. feature 개발은 `integration/v0.11.4` 에서 분기(다음 upstream 릴리스 통합 전까지).
+
+## 개발 에이전트 — 세션 종료 상태 스냅샷 + 연속성 점검
+
+작성 시점 기준 GitHub·로컬 git 을 **다시 조회한 값**이다. 다음 세션은 이 표를 현재 상태로 재사용하지 말고 같은 명령으로 다시 읽는다.
+
+### 성공 상태 증적
+
+| 항목                  | 값                                                                                                                            | 출처                          |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| 릴리스 태그           | `v0.11.4-kwh.1` (annotated) → `e901f7724f1cd2a6031b7671c83f9c891ece6d6a`, `main` 계보 포함                                    | `git cat-file`, `merge-base`  |
+| GHCR 빌드 run         | `37579260460` completed / success, headSha `e901f7724`                                                                        | `gh run view`                 |
+| 배포 run              | `37600391176` completed / success, `workflow_dispatch`, 09:24:28 ~ 09:36:24 UTC, headSha `9637986a2`(= 고정된 `guide_commit`) | `gh run view`                 |
+| 가이드 핀             | `docs/manual/kwh-deploy-guide-v0.11.4-kwh.1.md` at `9637986a211f57f1b99b7709ff5fc6c57c5bb13c` 존재                            | `git cat-file -e`             |
+| 배포 요청 Issue       | #45 `CLOSED` (2026-10-07 09:43:45Z), 댓글 13개. 승인·결과·검수 댓글 포함                                                      | `gh issue view`               |
+| 브라우저 검수         | "PASS with follow-up" — 항목별 관찰 없음(위 절 참조)                                                                          | Issue #45 댓글                |
+| Pipelines             | `SKIPPED` (승인된 범위). 재기동은 #34                                                                                         | Issue #45, #34                |
+| `main`                | `f0789b305` = `origin/main`. 열린 PR 0건                                                                                      | `git rev-parse`, `gh pr list` |
+| `integration/v0.11.4` | `5d796c458` = `origin/integration/v0.11.4`                                                                                    | `git rev-parse`               |
+| 열린 추적 Issue       | #47 title-task `KeyError`, #48 도구 서버 DNS, #49 백업 권한·중단 시간, #34 Pipelines 안전 재기동                              | `gh issue list`               |
+
+프로덕션 컨테이너 상태는 개발 머신에서 조회하지 않았다. 배포 후 상태의 권위는 Issue #45 의 `## Deployment success` / `## Browser acceptance` 댓글이다.
+
+### 이번 사이클의 실제 작업 흐름 (재사용 가능)
+
+1. upstream 병합: `feature/upstream-merge-v0.11.4` → `integration/v0.11.4` (`merge-tree` 로 충돌 사전 예측)
+2. RC 태그 → GHCR 빌드 → 로컬 게이트(자동) + 수동 체크(OAuth·pipelines 채팅·RAG)
+3. 가이드 초안(`<TBD>` 포함) → 통합 PR → `main` 병합 → **최종 태그** → GHCR 빌드·digest → 최종 이미지 게이트
+4. 가이드 최종본(문서 전용 PR) → **배포 workflow 전문과 대조**(누락 2건 발견·반영) → `guide_commit` 갱신
+5. 배포 요청 Issue + 증적 → 소유자 승인 댓글 + 범위 보강 → dispatch → `production` Environment 승인 → 스모크 → 브라우저 검수 → Issue close
+6. 결과 일지 → 후속 Issue 추적
+
+### 세션 연속성 점검 결과
+
+- 작업 트리 clean, stash 0건, 열린 PR 0건, 개발 측 push 누락 없음. 최종 일지는 `main` 에 반영됨.
+- 로컬 `integration/v0.11.1` 이 원격보다 485커밋 뒤처져 있다(미푸시 작업 없음, 방치된 오래된 브랜치). 이 브랜치로 작업하지 않는다.
+- 로컬 게이트 컨테이너(8082/9099)는 `./scripts/local-test.sh --down` 으로 **제거**했다. 데이터 디렉터리 `~/openwebui-local-test-data`, `~/openwebui-local-test-pipelines` 는 보존(축적 데이터 기반 업그레이드 검증용). 브라우저에 남은 8082 세션 쿠키는 다음 기동 시 `oauth_sessions` `InvalidToken` 로그를 유발할 수 있다 — 로그에 보이면 이 항목을 먼저 의심한다.
+- OpenViking 은 GitHub repo watch(24h refresh)로 커밋된 문서를 수집한다. 방금 `main` 에 들어간 일지가 반영되기 전까지는 **이전 기억일 수 있으므로** 상태 판단은 git·GitHub 직접 조회가 우선한다.
+- **다음 세션 시작 점검 순서:** `git status --short --branch` → `git fetch` 후 `main`/`integration/v0.11.4` 의 origin 대비 ahead/behind → `gh issue list --repo kwh8121/openwebui-service --state open` → 이 일지 마지막 절.
+- 작업 브랜치: 다음 개발은 `integration/v0.11.4` 에서 `feature/<slug>` 분기. #47 수정이 첫 후보(`v0.11.4-kwh.2`).
