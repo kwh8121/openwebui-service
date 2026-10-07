@@ -1,6 +1,8 @@
-# v0.11.4-kwh.1 릴리스 준비 핸드오프
+# v0.11.4-kwh.1 릴리스 준비 핸드오프 (배포 완료, 이전 준비 기록)
 
-> **상태:** 개발 에이전트용 인계. 배포 승인이나 릴리스별 배포 가이드가 아니다. 아래 값은 2026-10-07 04:55–05:16 UTC의 관측 스냅샷이며, 실제 작업 전 GitHub와 운영 상태를 다시 읽는다. 이 브랜치의 Protocol v1.2.1 보완은 아직 운영 `main`에 반영되지 않았다.
+> **후속 상태 — 2026-10-07 09:51 UTC:** `v0.11.4-kwh.1`은 [배포 Issue #45](https://github.com/kwh8121/openwebui-service/issues/45)의 승인과 별도 `production` Environment 승인을 거쳐 [배포 run 37600391176](https://github.com/kwh8121/openwebui-service/actions/runs/37600391176)으로 배포됐다. Issue는 브라우저 검수 `PASS with follow-up`으로 닫혔고 사용자는 현행 운영 유지를 결정했다. [당일 작업일지](../jobs/2026-10-07-openwebui-jobs.md)에 결과와 후속 추적 #47·#48·#49가 기록돼 있다. **아래 본문은 04:55–05:16 UTC의 배포 전 준비 스냅샷이며 현재의 미완료 목록이나 새 배포 승인으로 사용하지 않는다.** 새 세션은 [최상위 협업 규약](github-control-plane-local-agent-handoff.ko.md)의 「상태 인지」에 따라 Issue·Actions·원격 Git과 실제 컨테이너를 다시 조회한다.
+
+> **당시 상태:** 개발 에이전트용 인계. 배포 승인이나 릴리스별 배포 가이드가 아니다. 아래 값은 2026-10-07 04:55–05:16 UTC의 관측 스냅샷이며, 실제 작업 전 GitHub와 운영 상태를 다시 읽는다. Protocol v1.2.1 보완은 당시 운영 `main`에 반영되기 전이었다.
 >
 > **권위:** [협업 규약](github-control-plane-local-agent-handoff.ko.md) → [CI/CD 메커니즘](github-actions-ghcr-release-deployment.md) → [릴리스 루틴](kwh-release-routine.md). 실제 작업 기록은 [2026-10-07 jobs log](../jobs/2026-10-07-openwebui-jobs.md)에 있다.
 
