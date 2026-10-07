@@ -68,3 +68,17 @@
 - 별도 작업 트리 `/tmp/openwebui-v0114-handoff`의 `feature/v0114-release-handoff`에 커밋 `fff96648be8827bbebba03c325f8bf2be8519348`을 만들고 `origin`에 push했다. [draft PR #42](https://github.com/kwh8121/openwebui-service/pull/42)는 `integration/v0.11.4`를 대상으로 한다. CLA 확인란은 사용자를 대신해 체크하지 않았다.
 - 커밋에는 개발 핸드오프 문서, 이 작업일지, OpenViking 대체를 위한 권위 문서/Issue form/OpenCode 분류·조회 변경만 포함했다. 미추적 `.omo/`, `.opencode/opencode.json`, `.opencode/mem0-mcp.cjs`와 무시된 `.omx/` 초안 계획, 운영 비밀값·데이터는 포함하지 않았다.
 - 검증: OpenCode 플러그인 테스트 21/21 통과, 변경 문서/Issue form의 직접 Prettier 검사 통과, staged diff 공백 검사 통과, 비밀값 패턴 0건. 이 검증은 실제 #31 증적 파서·새 백업 복원·120초 중단을 입증하지 않는다. PR은 **draft**이며 배포 승인이나 main 반영이 아니다.
+
+## 개발 에이전트 — #41 병합 반영 + 핸드오프 수신 (KST 오후)
+
+- PR #41(`integration/v0.11.3` → `main`) 병합 완료(`2ed7296c9`). 10-06 일지의 "미병합" 표기는 작성 시점 기준이다. `integration/v0.11.4` 에 `main` 을 `--no-ff` 병합(`47f30f013`).
+- 로컬 `integration/v0.11.4` 가 origin 보다 4커밋 뒤처진 채 병합해 낡은 기반 위에 올렸고, push 전이라 `reset --hard origin/integration/v0.11.4` 후 재병합했다. **브랜치 전환 직후 origin 대비 ahead/behind 를 먼저 본다.**
+- 배포 에이전트의 핸드오프(draft PR #42)를 검토했다. 충돌은 이 파일의 add/add 한 곳이었다. 내 일지 커밋은 push 전이라 버리고, #42 병합(`c2bdd01af`) 후 이 섹션으로 append 했다.
+- **사용자 결정:** (1) v0.11.4-kwh.1 은 **현행 배포 절차**로 진행한다. 백업 결함(서비스 stop 후 압축, `.env.openwebui.oauth` 백업 누락)은 배포 가이드·Issue 에 명시하며, "120초 중단"·"완전 복구"는 주장하지 않는다. (2) **Pipelines 는 이번 배포에서 제외**: `check_pipelines=false`, 정책 `stopped`, 결과는 `SKIPPED`(Issue #34 유지). (3) OpenViking 제외는 **배포 호스트에만** 적용하고 개발 에이전트 환경은 기존대로 활용한다 — `CLAUDE.md`·`AGENTS.md` 문구 보정.
+- RC 게이트 컨테이너 재기동(`v0.11.4-kwh.1-rc.1`, `--no-backup`, 포트 8082) → 브라우저 수동 체크리스트(OAuth, pipelines 채팅, RAG) 대기.
+
+### 다음 재개 지점
+
+1. 수동 체크리스트 결과 → 일지에 `PASS/SKIPPED/UNKNOWN` 구분 기록. `langchain_community` 는 배포 Issue 사전조건.
+2. `docs/manual/kwh-deploy-guide-v0.11.4-kwh.1.md` 작성(Pipelines 제외, 백업 결함 명시, 롤백 대상 `v0.11.3-kwh.1`).
+3. `integration/v0.11.4` → `main` PR(`--merge`) → 최종 태그 `v0.11.4-kwh.1` → GHCR 빌드·digest → 최종 게이트 → 배포 Issue.

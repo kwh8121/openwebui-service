@@ -17,7 +17,7 @@ Claude Code가 세션 시작 시 이 파일을 자동으로 읽습니다. 이 �
 
 ## 데이터 위치 원칙 (요약)
 
-**One Fact, One Home** (2026-08-11 채택, 배포 세션 조회 경로 2026-10-07 보완): Linear = 개발 작업판 · GitHub Issue·Actions = 현재 배포 승인·결과 · jobs log = 실제 작업 이력 · `docs/plan/` = 확정된 계획 · `docs/manual/` = 운영 절차 · `docs/references/` = upstream 참고자료 · mem0 = 프로젝트 밖 개인 선호. 다음 배포 세션은 커밋된 문서를 Git에서 직접 읽고 GitHub·현재 컨테이너를 재조회합니다. 외부 기억 서비스는 배포 절차의 의존성이 아닙니다. 전체 매트릭스는 `AGENTS.md` §"데이터 위치 원칙 — One Fact, One Home".
+**One Fact, One Home** (2026-08-11 채택, 배포 세션 조회 경로 2026-10-07 보완): Linear = 개발 작업판 · GitHub Issue·Actions = 현재 배포 승인·결과 · jobs log = 실제 작업 이력 · `docs/plan/` = 확정된 계획 · `docs/manual/` = 운영 절차 · `docs/references/` = upstream 참고자료 · mem0 = 프로젝트 밖 개인 선호. 다음 배포 세션은 커밋된 문서를 Git에서 직접 읽고 GitHub·현재 컨테이너를 재조회합니다. 외부 기억 서비스는 배포 절차의 의존성이 아닙니다. 단, **개발 에이전트 환경에서는 OpenViking을 기존대로 활용**합니다(watch 대상: `docs/jobs/`, `docs/manual/`, `docs/plan/`, `docs/references/`, `AGENTS.md`, `CLAUDE.md`). 배포 호스트만 OpenViking을 쓰지 않습니다. 전체 매트릭스는 `AGENTS.md` §"데이터 위치 원칙 — One Fact, One Home".
 
 ## 개발·릴리스 워크플로 — 5단계
 

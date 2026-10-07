@@ -76,7 +76,7 @@
 
 - **A. Linear** = 지금 살아 있는 작업판. 작업 단위의 대화·상태만. 세션 전체 요약은 jobs log로 이관. **Linear MCP는 Claude Code 세션에서만 사용 가능하며 opencode 프로덕션 에이전트에는 통합이 없다** — opencode 세션은 Linear를 `unresolved`로 취급하고 GitHub Issue/Actions를 권위 증적으로 쓴다(`.opencode/skill/deployment-context/SKILL.md`). 따라서 **배포 경로의 권위 증적은 Linear가 아니라 GitHub이며**, 이는 §"개발·릴리스 워크플로" 5단계가 GitHub Issue에 남는 이유와 일치한다.
 - **B. jobs log** = 세션 종료 후 남기는 공식 작업일지. Append-only 감사 기록. 오늘 무엇을 했는가·어떤 결정을 했는가·어떤 이슈/PR/커밋이 생겼는가·어떤 문제가 발견됐는가·다음 세션 재개 지점·학습 사항을 포함.
-- **C. Git/GitHub 직접 조회** = 다음 에이전트가 커밋된 `AGENTS.md`, `CLAUDE.md`, `docs/jobs/`, `docs/manual/`, `docs/plan/`, `docs/references/`에서 절차·이력을 읽고 GitHub 배포 Issue·Actions에서 현재 승인·결과를 확인한다. 로컬 `origin/main`과 원격 `main`이 다르면 로컬 문서를 최신 권위로 취급하지 않는다. 배포 세션은 외부 기억 서비스에 의존하지 않는다.
+- **C. Git/GitHub 직접 조회** = 다음 에이전트가 커밋된 `AGENTS.md`, `CLAUDE.md`, `docs/jobs/`, `docs/manual/`, `docs/plan/`, `docs/references/`에서 절차·이력을 읽고 GitHub 배포 Issue·Actions에서 현재 승인·결과를 확인한다. 로컬 `origin/main`과 원격 `main`이 다르면 로컬 문서를 최신 권위로 취급하지 않는다. 배포 세션은 외부 기억 서비스에 의존하지 않는다. 개발 에이전트 환경(이 저장소의 개발 머신)에서는 OpenViking을 기존대로 활용한다(2026-10-07 사용자 결정; 배포 호스트에만 적용되는 제외).
 - **D. mem0** = 프로젝트 밖 개인 선호. auto-capture 훅이 프로젝트 결정도 저장하더라도 참고 캐시이며 진실 소스가 아니다. 배포 판단과 세션 재개에는 사용하지 않는다.
 
 **한 줄 요약**: Linear = 개발 작업판 · GitHub Issue·Actions = 현재 배포 승인·결과 · 커밋된 jobs log·manual·plan = 다음 세션의 절차·이력 · mem0 = 프로젝트 밖 개인 선호.
