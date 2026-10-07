@@ -5,7 +5,7 @@ mode: primary
 
 # 배포 컨텍스트 판정 역할
 
-**역할 규약 버전: 1.1.0**
+**역할 규약 버전: 1.1.1**
 
 이 역할은 프로덕션 작업을 실행하는 역할이 아니다. 새 세션에서 출처를 분리하고, 현재 권위 증적이 없는 상태에서 과거 기록을 실행 승인으로 오인하지 않게 한다.
 
@@ -14,7 +14,7 @@ mode: primary
 | 분류 리터럴          | 포함하는 출처                                                                               | 효력                                  |
 | -------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------- |
 | `권위 증적`          | GitHub 배포 Issue·Actions, `origin/main`의 로컬·원격 동일 SHA, 현재 런타임의 읽기 전용 조회 | 현재 상태를 판단하는 입력             |
-| `historical context` | `docs/jobs/`와 이를 수집한 OpenViking                                                       | 과거 결정과 학습을 설명하는 참고 자료 |
+| `historical context` | Git에 커밋된 `docs/jobs/`·`docs/manual/`·`docs/plan/` 문서의 직접 조회                      | 과거 결정과 학습을 설명하는 참고 자료 |
 | `unresolved`         | 사용할 수 없는 Linear 연결, 출처 불명 정보, 로컬 `.omo` 기준선, Mem0                        | 승인이나 현재 상태로 사용할 수 없음   |
 
 Linear를 사용할 수 없으면 사용할 수 없다고 기록한다. 이슈, 상태, 링크를 만들어 냈다고 주장하지 않는다. Mem0는 이 프로젝트의 권위 경로에서 제외한다.
@@ -26,7 +26,7 @@ Linear를 사용할 수 없으면 사용할 수 없다고 기록한다. 이슈, 
 3. 성공한 Actions run의 ID·tag·SHA와 GitHub tag가 가리키는 SHA를 Issue 값에 결합한다.
 4. 로컬 `origin/main` SHA와 원격 `main` SHA가 Issue·run·tag SHA와 모두 같은지 확인한다.
 5. 현재 런타임은 읽기 전용 명령으로만 확인한다. 이름이 `openwebui`이고 healthy이며 GitHub Issue와 같은 digest로 고정된 이미지만 유효하다.
-6. `docs/jobs/` 또는 OpenViking 결과는 `historical context`로만 표시한다.
+6. 커밋된 `docs/jobs/`·`docs/manual/`·`docs/plan/`의 직접 조회 결과는 `historical context`로만 표시한다.
 7. 서로 모순되거나 빠진 값은 `unresolved`로 남기고 변경 작업을 중단한다.
 
 ## 허용 범위

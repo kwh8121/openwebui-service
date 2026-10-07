@@ -1,5 +1,9 @@
 # Open WebUI 에이전트 가이드
 
+## 머신 역할
+
+`/home/ubuntu/openwebui`가 있는 이 호스트는 **프로덕션 배포 전용 머신**이다. 새 세션과 배포 작업을 시작할 때 `docs/manual/github-control-plane-local-agent-handoff.ko.md` §"상태 인지"에 따라 GitHub Issue·Actions, 커밋된 프로젝트 문서, 현재 컨테이너·데이터 상태를 직접 다시 조회한다. 이 호스트에서 `scripts/local-test.sh`, npm 빌드, feature 개발·테스트를 실행하지 않는다. 아래 로컬 개발·검증 설명은 개발 머신에만 적용한다.
+
 ## 저장소 구조
 
 - `src/`는 SvelteKit 프론트엔드입니다. `src/routes`에 라우트가, `src/lib`에 공유 UI·스토어·클라이언트 유틸리티가 있습니다.
@@ -14,7 +18,7 @@
 - 백엔드: `backend/`에서 `./dev.sh`를 실행합니다. 포트 8080에서 reload 서버가 뜨고 Vite origin을 허용합니다. 풀스택 작업 시 Vite와 함께 실행합니다.
 - 패키지 서버 실행 명령은 `open-webui serve`입니다. `WEBUI_SECRET_KEY`가 없으면 `.webui_secret_key`를 생성하거나 읽어들입니다. 이 키와 `backend/data`는 커밋하지 않습니다.
 
-## 로컬 환경 제약 (이 개발 PC)
+## 로컬 환경 제약 (개발 머신 전용)
 
 `npm` / `ruff` 명령을 실행하기 전에 반드시 읽으십시오. 아래는 취향이 아니라 **머신의 사실**입니다. 이를 모르고 시작한 세션은 매번 같은 실패를 반복하게 됩니다.
 
@@ -61,21 +65,21 @@
 | ------------------------------------------ | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
 | 계획안, 검증 요청, 상태 전이 (in-flight)   | Linear                                              | jobs log에는 결과 요약만                                                                                   |
 | **확정된 개발·리뷰 계획 (approved plans)** | **`docs/plan/`**                                    | **Linear 이슈는 유지하고 attachment로 `docs/plan/<file>.md` 링크만 (승격 후에도 stage 3~4 포인터로 사용)** |
-| 세션에서 실제로 한 일                      | jobs log (`docs/jobs/YYYY-MM-DD-openwebui-jobs.md`) | OpenViking이 watch로 자동 인제스션                                                                         |
+| 세션에서 실제로 한 일                      | jobs log (`docs/jobs/YYYY-MM-DD-openwebui-jobs.md`) | 커밋 후 Git에서 직접 조회. 미커밋 로그는 다른 세션·머신에 전달된 것으로 보지 않음                          |
 | 코드 변경, 브랜치, PR, 태그                | Git / GitHub                                        | Linear·jobs log에는 링크와 요약만                                                                          |
 | 배포 승인·결과 evidence                    | GitHub Issue                                        | Linear에는 attachment 링크만                                                                               |
 | **upstream Open WebUI 버전·기능 참고자료** | **`docs/references/`**                              | **jobs log에는 참조 링크만. mem0에는 넣지 않음**                                                           |
-| 장기 학습, 반복 실수, 운영 원칙            | jobs log → OpenViking                               | mem0에는 넣지 않음 (참고 캐시로 남을 수 있음)                                                              |
+| 장기 학습, 반복 실수, 운영 원칙            | `docs/jobs/`·`docs/manual/`의 커밋 문서             | 다음 세션은 Git에서 직접 읽음. mem0에는 넣지 않음                                                          |
 | 개인 선호, 답변 스타일, 일반 습관          | mem0                                                | 프로젝트 문서에는 넣지 않음                                                                                |
 
-**4-도구 역할 요약:**
+**정보원 역할 요약:**
 
 - **A. Linear** = 지금 살아 있는 작업판. 작업 단위의 대화·상태만. 세션 전체 요약은 jobs log로 이관. **Linear MCP는 Claude Code 세션에서만 사용 가능하며 opencode 프로덕션 에이전트에는 통합이 없다** — opencode 세션은 Linear를 `unresolved`로 취급하고 GitHub Issue/Actions를 권위 증적으로 쓴다(`.opencode/skill/deployment-context/SKILL.md`). 따라서 **배포 경로의 권위 증적은 Linear가 아니라 GitHub이며**, 이는 §"개발·릴리스 워크플로" 5단계가 GitHub Issue에 남는 이유와 일치한다.
 - **B. jobs log** = 세션 종료 후 남기는 공식 작업일지. Append-only 감사 기록. 오늘 무엇을 했는가·어떤 결정을 했는가·어떤 이슈/PR/커밋이 생겼는가·어떤 문제가 발견됐는가·다음 세션 재개 지점·학습 사항을 포함.
-- **C. OpenViking** = 다음 에이전트가 읽을 장기 컨텍스트 DB. Watch 대상: `docs/jobs/`, `docs/manual/`, `docs/plan/`, `docs/references/`, `AGENTS.md`, `CLAUDE.md`. GitHub repo watch(24h refresh)로 committed 파일 자동 인제스션. Linear 승인 계획은 `docs/plan/` 승격 후 자동 커버, GitHub 배포 이슈 결과는 jobs log를 게이트웨이로 커버.
-- **D. mem0** = 프로젝트 밖 개인 선호. auto-capture 훅이 프로젝트 결정도 저장하나 이는 참고 캐시이며 진실 소스가 아니다. 원칙 판단 시 jobs log와 OpenViking 이관본이 우선하며 mem0 결과에 의존하지 말 것.
+- **C. Git/GitHub 직접 조회** = 다음 에이전트가 커밋된 `AGENTS.md`, `CLAUDE.md`, `docs/jobs/`, `docs/manual/`, `docs/plan/`, `docs/references/`에서 절차·이력을 읽고 GitHub 배포 Issue·Actions에서 현재 승인·결과를 확인한다. 로컬 `origin/main`과 원격 `main`이 다르면 로컬 문서를 최신 권위로 취급하지 않는다. 배포 세션은 외부 기억 서비스에 의존하지 않는다.
+- **D. mem0** = 프로젝트 밖 개인 선호. auto-capture 훅이 프로젝트 결정도 저장하더라도 참고 캐시이며 진실 소스가 아니다. 배포 판단과 세션 재개에는 사용하지 않는다.
 
-**한 줄 요약**: Linear = 지금 할 일 · jobs log = 오늘 실제로 한 일 · docs/plan = 확정된 계획 · docs/references = upstream 참고 · OpenViking = 다음 에이전트가 읽을 기억 · mem0 = 프로젝트 밖 개인 선호.
+**한 줄 요약**: Linear = 개발 작업판 · GitHub Issue·Actions = 현재 배포 승인·결과 · 커밋된 jobs log·manual·plan = 다음 세션의 절차·이력 · mem0 = 프로젝트 밖 개인 선호.
 
 **`docs/manual/` vs `docs/references/` 경계 원칙 (2026-08-11 채택):**
 
@@ -97,7 +101,7 @@
 2. **계획 검증 (Plan verification)** — Planner가 부모 라벨을 `plan-draft` → `needs-review`로 전이합니다. Verifier 에이전트가 `list_issues --label needs-review`로 이를 집어 findings를 이슈 코멘트로 게시하고(PASS/CRITICAL/MEDIUM/MINOR + 판정), 승인 시 `plan-approved`로, 수정 요청 시 `plan-draft`로 되돌립니다. 코멘트 스레드가 감사 지면입니다.
 3. **개발 (Development)** — Dev 에이전트가 `plan-approved` 하위 이슈를 집어 그 이슈의 `gitBranchName` 필드로 feature 브랜치를 만듭니다. 표준 `feature/* → integration/vX.Y.Z → main` 흐름(아래 §"릴리스 루틴 및 세션 연속성" 참조). Linear 이슈 상태("In Progress")는 진행 포인터일 뿐이며 진실은 git이 보유합니다.
 4. **개발 검증 (Dev review)** — Dev 에이전트가 이슈 라벨을 `verify-request`로 전이합니다. Verifier가 이를 집어 diff를 리뷰하고(Linear 이슈에 attachment로 연결된 GitHub PR 경유) findings를 게시한 뒤 `verify-passed`로 전이합니다. 2단계와 동일한 코멘트 스레드 감사 패턴입니다.
-5. **배포 (Deployment)** — **변경 없음, GitHub Issue 유지.** 로컬 dev 에이전트가 handoff §"배포 요청 계약"(Protocol v1.2)에 따라 `Production deployment request` Issue를 제출합니다. opencode 프로덕션 에이전트가 `deploy-approved-production-release.yaml` 워크플로로 실행합니다. Linear 이슈는 감사 추적을 위해 attachment로 GitHub 배포 Issue URL을 참조합니다.
+5. **배포 (Deployment)** — **GitHub Issue 유지.** 로컬 dev 에이전트가 handoff §"배포 요청 계약"(Protocol v1.2.1)에 따라 `Production deployment request` Issue를 제출합니다. opencode 프로덕션 에이전트가 `deploy-approved-production-release.yaml` 워크플로로 실행합니다. Linear 이슈는 감사 추적을 위해 attachment로 GitHub 배포 Issue URL을 참조합니다.
 
 **라벨 어휘** (워크스페이스 레벨, 2026-08-11 생성):
 
@@ -111,19 +115,19 @@
 
 **채택 근거**: 1~2단계(계획 + 계획 검증)가 Linear의 계층적 이슈 모델과 코멘트 기반 리뷰에서 가장 큰 이득을 봅니다 — 텍스트만으로 하는 계획은 코멘트 스레드가 잡아내는 설계 결함을 놓칩니다. 배포가 GitHub에 남는 이유는 opencode 프로덕션 에이전트 계약이 안정적이고, 이를 바꾸면 회귀 위험이 생기기 때문입니다. 2026-08-11 시나리오 B 워크스루(`docs/jobs/2026-08-11-openwebui-jobs.md` 참조)에서 검증됐으며, 이때 verifier가 runner health monitoring 계획의 Bootstrap paradox를 잡아냈습니다(planner는 놓쳤던 결함).
 
-**jobs log와의 공존**: 전체 경계 매트릭스는 위 §"데이터 위치 원칙" 참조. 요약하면 jobs log는 세션 단위 진실(append-only), Linear 코멘트는 이슈별 대화, OpenViking은 jobs log를 watch해 자동 인제스션, mem0은 개인 선호 전용입니다.
+**jobs log와의 공존**: 전체 경계 매트릭스는 위 §"데이터 위치 원칙" 참조. jobs log는 세션 단위 진실(append-only)이고, 다음 세션은 커밋된 문서를 Git에서 직접 읽습니다. Linear 코멘트는 이슈별 대화, GitHub Issue·Actions는 현재 배포 증적, mem0는 개인 선호 전용입니다.
 
 ## 릴리스 루틴 및 세션 연속성
 
 릴리스·배포 경로를 건드리기 전에 아래를 참조하십시오. **충돌 시 권위 순서는 1 → 2 → 3입니다.**
 
-1. **최상위 권위 (협업 규약)**: `docs/manual/github-control-plane-local-agent-handoff.ko.md` — **Protocol v1.2. 릴리스·배포 협업에 관한 모든 충돌에서 이 문서가 이깁니다.** 로컬↔프로덕션 에이전트 핸드오프, 통제 평면으로서의 GitHub, 필수 릴리스 흐름(문서를 포함한 모든 변경이 `feature/* → integration/vX.Y.Z → main`), 배포 요청 Issue 스키마, 프로덕션 에이전트 응답 계약, 인시던트 매트릭스, 상태 인지를 다룹니다.
+1. **최상위 권위 (협업 규약)**: `docs/manual/github-control-plane-local-agent-handoff.ko.md` — **Protocol v1.2.1. 릴리스·배포 협업에 관한 모든 충돌에서 이 문서가 이깁니다.** 로컬↔프로덕션 에이전트 핸드오프, 통제 평면으로서의 GitHub, 필수 릴리스 흐름(문서를 포함한 모든 변경이 `feature/* → integration/vX.Y.Z → main`), 배포 요청 Issue 스키마, 프로덕션 에이전트 응답 계약, 인시던트 매트릭스, 상태 인지를 다룹니다.
 2. **CI/CD 메커니즘 권위**: `docs/manual/github-actions-ghcr-release-deployment.md` — 태그 규칙, GHCR 관례, 이미지 빌드 정책. 충돌이 CI/CD 고유 사안이고 위 협업 규약이 다루지 않을 때 이깁니다. 저장소 역할(`origin` push 대상, `upstream` fetch 전용에 push URL `DISABLED`), 브랜치·릴리스 흐름, 이미지 빌드 정책(immutable 태그, `linux/amd64`, buildx registry 캐시, `v*-kwh.*` 워크플로 트리거, RC vs 최종 태그 의미), 배포 정책(compose 파일 역할, 사전 백업, 이전 이미지 태그로 롤백), slim vs non-slim 빌드의 모델 캐시 고려사항을 다룹니다.
 3. **실무 루틴 (여기서 시작)**: `docs/manual/kwh-release-routine.md` — feature → integration → RC → 로컬 게이트 → PR → main → 최종 태그 → 프로덕션까지의 전 과정, 복사해 쓰는 명령 블록, 환경 변수 목록, SQLite WAL-safe 백업, 스모크 체크리스트, 복구 패턴.
 
 기타 참조:
 
-- **세션/작업 이력**: `~/projects/openwebui-service/docs/jobs/` 아래 `YYYY-MM-DD-openwebui-jobs.md`. 각 파일은 그날의 결정·커밋·PR·학습을 세션 간 컨텍스트로 남깁니다. 같은 날 작업은 `## HH:MM` 섹션으로 **append**, 날짜가 바뀌면 **새 파일**. 작업 반복을 피하려면 이전 날짜 로그를 먼저 확인합니다.
+- **세션/작업 이력**: 저장소의 `docs/jobs/` 아래 `YYYY-MM-DD-openwebui-jobs.md`. 각 파일은 그날의 결정·커밋·PR·학습을 세션 간 컨텍스트로 남깁니다. 같은 날 작업은 `## HH:MM` 섹션으로 **append**, 날짜가 바뀌면 **새 파일**. 작업 반복을 피하려면 이전 날짜의 **커밋된** 로그를 먼저 확인하고 현재 배포 상태는 GitHub·런타임에서 재조회합니다.
 - **GHCR 이미지 태그 형식**: `vX.Y.Z-kwh.N` (git 태그 그대로, `v` 접두사 포함)과 `git-<7자리-short-sha>`. 접두사 없는 `X.Y.Z-kwh.N`이나 40자 전체 SHA는 발행되지 않으며 `docker pull`이 실패합니다.
 - **`main`에 절대 직접 커밋하지 않습니다.** 로컬에서 실수했다면, 그 SHA에 `feature/<slug>` 브랜치를 만들어 커밋을 보존하고 `git reset --hard origin/main` 후 `--no-ff`로 integration에 병합합니다. 복구 검증 사례: 2026-07-22 커밋 `c68c745d2`.
 - **모든 변경(문서 포함)**은 `feature/*` → `integration/vX.Y.Z` → PR → `main` 경로를 따릅니다. `feature/docs-*` → `main` 직행 단축 경로는 **폐지되었습니다** (2026-07-31).

@@ -5,24 +5,27 @@ agent: deployment-context
 
 # 배포 컨텍스트 확인
 
-**명령 규약 버전: 1.1.0**
+**명령 규약 버전: 1.1.1**
 
 실행 인자: `$ARGUMENTS`
 
 다음 순서로 읽기 전용 조회만 수행하고 결과를 `권위 증적`, `historical context`, `unresolved`로 나눠 보고한다.
 
-1. `gh issue view --repo kwh8121/openwebui-service <번호> --json state,number,url,title,body`로 CLOSED Issue의 최종 tag·main SHA·run URL·image digest를 읽는다.
-2. `gh run view <run-id> --repo kwh8121/openwebui-service --json databaseId,status,conclusion,event,headBranch,headSha,url`과 `gh api repos/kwh8121/openwebui-service/commits/<최종-tag>`를 사용한다. run은 completed/success여야 하며 Issue·run·tag의 ID, tag, SHA가 일치해야 한다.
-3. `GIT_MASTER=1 git rev-parse --verify origin/main`과 `GIT_MASTER=1 git ls-remote --exit-code origin refs/heads/main`의 40자 SHA가 Issue·run·tag SHA와 모두 같은지 확인한다. 이 명령은 ref를 갱신하지 않는다.
-4. 현재 런타임은 `docker inspect openwebui --format={{json .}}`로 읽는다. 컨테이너 이름은 `openwebui`, 상태는 running/healthy, `Config.Image`는 Issue와 같은 `ghcr.io/kwh8121/openwebui-service@sha256:<digest>`여야 한다.
-5. `docs/jobs/`와 OpenViking은 장기 이력 참고에만 사용한다. 배포 승인과 현재 상태는 GitHub 및 현재 조회 결과로 다시 확인한다.
-6. Linear는 현재 사용할 수 없는 통합으로 `unresolved`에 기록한다. Linear 항목이나 링크를 가정하거나 생성하지 않는다.
-7. Mem0와 로컬 `.omo` 증적은 권위 입력에서 제외한다.
+1. `gh pr list --repo kwh8121/openwebui-service --state open`, `gh issue list --repo kwh8121/openwebui-service --label production-deploy --state all --limit 100`, `gh run list --repo kwh8121/openwebui-service --workflow deploy-approved-production-release.yaml --limit 20`, `gh run list --repo kwh8121/openwebui-service --workflow docker.yaml --limit 20`로 대상 Issue·run을 읽기 전용으로 발견한다. 목록은 식별자 탐색용이고 승인 증적이 아니다.
+2. `gh issue view --repo kwh8121/openwebui-service <번호> --json state,number,url,title,body`로 CLOSED Issue의 최종 tag·main SHA·run URL·image digest를 읽는다. 열린 배포 요청은 별도로 표시하되 현재 v1.1 증적 파서의 변경 허용 근거로 승격하지 않는다.
+3. `gh run view <run-id> --repo kwh8121/openwebui-service --json databaseId,status,conclusion,event,headBranch,headSha,url`과 `gh api repos/kwh8121/openwebui-service/commits/<최종-tag>`를 사용한다. run은 completed/success여야 하며 Issue·run·tag의 ID, tag, SHA가 일치해야 한다.
+4. `GIT_MASTER=1 git rev-parse --verify origin/main`과 `GIT_MASTER=1 git ls-remote --exit-code origin refs/heads/main`의 40자 SHA가 Issue·run·tag SHA와 모두 같은지 확인한다. 이 명령은 ref를 갱신하지 않는다.
+5. 현재 런타임은 `docker inspect openwebui --format={{json .}}`로 읽는다. 컨테이너 이름은 `openwebui`, 상태는 running/healthy, `Config.Image`는 Issue와 같은 `ghcr.io/kwh8121/openwebui-service@sha256:<digest>`여야 한다.
+6. Git에 커밋된 `docs/jobs/`·`docs/manual/`·`docs/plan/`을 직접 읽어 이력·절차를 확인한다. 미커밋 로그와 초안 `.omx/`는 공유 인계로 간주하지 않는다. 배포 승인과 현재 상태는 GitHub 및 현재 런타임 조회 결과로 다시 확인한다.
+7. Linear는 현재 사용할 수 없는 통합으로 `unresolved`에 기록한다. Linear 항목이나 링크를 가정하거나 생성하지 않는다.
+8. Mem0와 로컬 `.omo` 증적은 권위 입력에서 제외한다.
+
+현재 v1.1 파서는 실제 #31의 Issue form·Actions run·Compose 컨테이너 형식과 불일치한다. 현행 allowlist도 Issue 승인·결과 댓글, Pipelines, 데이터 mount, 백업, 디스크 점검을 모두 수집하지 못한다. 목록 조회가 가능해도 이를 자동 `READY`로 판정하지 말고, 계획의 실제 증적 fixture·운영 조회·단계별 게이트가 구현될 때까지 필수 미확인 항목을 `unresolved`로 보고한다.
 
 마지막에 다음 형식으로 답한다.
 
 - `권위 증적`: 출처, 식별자, 관측 시각, 서로 일치하는 값
-- `historical context`: jobs 문서 또는 OpenViking에서 얻은 관련 이력
+- `historical context`: 커밋된 jobs·manual·plan 문서에서 직접 확인한 관련 이력과 절차
 - `unresolved`: 누락, 불일치, 접근 불가 통합
 - `허용 작업`: 읽기 전용 조사 및 `feature/*` 작업만, 또는 모든 필수 증적이 최신이고 일치할 때의 분류된 변경 후보
 

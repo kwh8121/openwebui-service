@@ -5,7 +5,7 @@ description: 새 OpenCode 세션에서 프로덕션 관련 요청의 현재 권�
 
 # 배포 컨텍스트
 
-**스킬 규약 버전: 1.1.0**
+**스킬 규약 버전: 1.1.1**
 
 ## 목적
 
@@ -24,8 +24,7 @@ description: 새 OpenCode 세션에서 프로덕션 관련 요청의 현재 권�
 
 ### `historical context`
 
-- `docs/jobs/`의 append-only 작업 기록
-- 해당 문서를 장기 컨텍스트로 제공하는 OpenViking
+- Git에 커밋된 `docs/jobs/`의 append-only 작업 기록과 `docs/manual/`·`docs/plan/`의 절차·확정 계획. 현재 원격 `main`과 로컬 `origin/main`이 다르면 로컬 문서를 최신본으로 취급하지 않는다.
 
 이 레인은 과거 결정과 반복 실수를 설명하지만 배포 승인, 현재 SHA, 현재 런타임 상태를 증명하지 않는다.
 
@@ -35,13 +34,13 @@ description: 새 OpenCode 세션에서 프로덕션 관련 요청의 현재 권�
 - GitHub, Git, 런타임 사이의 불일치
 - 출처나 관측 시각이 없는 주장
 - 무시된 로컬 `.omo` 기준선
-- Mem0에서 나온 프로젝트 정보
+- Mem0 또는 다른 외부 기억 서비스에서 나온 프로젝트 정보
 
-Linear가 없으면 통합이 막혔다고 명시하고 가짜 이슈, 상태, 관계를 만들지 않는다. Mem0는 권위 또는 장기 프로젝트 이력 경로로 사용하지 않는다.
+Linear가 없으면 통합이 막혔다고 명시하고 가짜 이슈, 상태, 관계를 만들지 않는다. 배포 세션은 외부 기억 서비스의 연결 여부를 기다리지 않으며, 그 결과를 권위 또는 장기 프로젝트 이력 경로로 사용하지 않는다.
 
 ## 실행 규칙
 
-1. 먼저 `/deployment-context`로 읽기 전용 수집을 수행한다.
+1. 먼저 `/deployment-context`로 읽기 전용 수집을 수행하고 커밋된 프로젝트 문서·GitHub Issue·Actions를 직접 조회한다.
 2. 로컬·원격 main SHA를 직접 비교한다. 불일치하면 `unresolved`다.
 3. GitHub Issue, Actions run, tag, 로컬·원격 main의 run ID·tag·SHA가 모두 일치하는지 확인한다.
 4. 현재 런타임은 조회만 한다. `openwebui`의 running/healthy 상태와 digest-pinned `Config.Image`가 Issue image digest와 일치해야 한다.
