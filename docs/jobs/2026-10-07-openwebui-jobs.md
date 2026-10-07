@@ -82,3 +82,10 @@
 1. 수동 체크리스트 결과 → 일지에 `PASS/SKIPPED/UNKNOWN` 구분 기록. `langchain_community` 는 배포 Issue 사전조건.
 2. `docs/manual/kwh-deploy-guide-v0.11.4-kwh.1.md` 작성(Pipelines 제외, 백업 결함 명시, 롤백 대상 `v0.11.3-kwh.1`).
 3. `integration/v0.11.4` → `main` PR(`--merge`) → 최종 태그 `v0.11.4-kwh.1` → GHCR 빌드·digest → 최종 게이트 → 배포 Issue.
+
+## 개발 에이전트 — 수동 체크리스트 결과 + 가이드 초안
+
+- RC 게이트 재기동(`v0.11.4-kwh.1-rc.1`, `--no-backup`): 자동 `PASS`, 부팅 163초, upgrade 0건.
+- **수동 체크리스트(사용자 확인, 로컬 누적 데이터·RC 이미지):** Google OAuth 로그인 `PASS` · pipelines 모델 채팅 `PASS`(middleware 필터 경로) · RAG 업로드·인용 `PASS`.
+- **여전히 `UNKNOWN`:** 프로덕션 Tool/Function 의 `langchain_community` 사용 — 로컬 DB 에 Tool/Function 이 없어 검증 불가. 배포 Issue 사전조건으로 넣었다(가이드 §2).
+- `docs/manual/kwh-deploy-guide-v0.11.4-kwh.1.md` 초안 작성. Pipelines `SKIPPED`/`check_pipelines=false`, 백업 결함 명시, 롤백 대상 `v0.11.3-kwh.1`. 태그 의존 값(SHA·digest·run·Issue 번호·최종 게이트)은 `<TBD>` — 최종 태그 후 문서 전용 PR 로 채우고 그 병합 커밋을 `guide_commit` 으로 쓴다.
