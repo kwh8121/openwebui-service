@@ -187,3 +187,12 @@
 - OpenViking 은 GitHub repo watch(24h refresh)로 커밋된 문서를 수집한다. 방금 `main` 에 들어간 일지가 반영되기 전까지는 **이전 기억일 수 있으므로** 상태 판단은 git·GitHub 직접 조회가 우선한다.
 - **다음 세션 시작 점검 순서:** `git status --short --branch` → `git fetch` 후 `main`/`integration/v0.11.4` 의 origin 대비 ahead/behind → `gh issue list --repo kwh8121/openwebui-service --state open` → 이 일지 마지막 절.
 - 작업 브랜치: 다음 개발은 `integration/v0.11.4` 에서 `feature/<slug>` 분기. #47 수정이 첫 후보(`v0.11.4-kwh.2`).
+
+## 개발 에이전트 — 오래된 `integration/*` 브랜치 정리 검토
+
+- **검토 대상:** `integration/v0.11.0`·`v0.11.1`·`v0.11.3`. 절대 경로 `/usr/bin/git` 로 확인했다(`rtk` 훅이 `git` 출력을 가공해 "고유 커밋 1건" 같은 모순된 값을 낸 사례가 있었다 — AGENTS.md "도구 함정" 참조).
+- **결과:** 세 브랜치 모두 `origin/main` 의 조상이고 `main` 대비 **고유 커밋 0건**. 관련 PR(#21~#27 등)은 모두 병합. 관련 태그(`v0.11.1`·`-kwh.1`·`-kwh.2` 등)는 `main` 계보에 있어 릴리스 이력은 태그로 남는다. `integration/v0.11.4` 는 다음 `feature/*` 분기 기준이라 유지.
+- **로컬:** 낡은 로컬 사본 3개를 삭제했다(미푸시 작업 없음 — 로컬 `v0.11.1` 은 원격보다 485커밋 뒤처졌을 뿐이었다).
+- **원격:** 삭제를 시도했으나 ruleset `integration branch protection`(id 22414968, `active`, 대상 `refs/heads/integration/*`, 규칙 `deletion`·`non_fast_forward`, bypass 없음)이 `GH013 Cannot delete this branch` 로 거부했다. 보호 정책을 임의로 해제·우회하지 않았고, **소유자 결정으로 원격 브랜치는 유지**한다.
+- **복구용 원격 tip SHA:** `integration/v0.11.0`=`4853babbfe67b4a8beb5645b3e923dba7d94d584`, `integration/v0.11.1`=`c7509252a5d39053f7fa72e199d8015a56b7ad95`, `integration/v0.11.3`=`3ca62395343abfdf331bb06951334d27bd38d121`.
+- **교훈:** 브랜치 정리 전에 ruleset(`gh api repos/<repo>/rulesets`)을 먼저 본다. 이 저장소는 `integration/*` 삭제를 의도적으로 금지한다. 원격 정리가 필요하면 소유자가 ruleset 을 임시로 풀고, 삭제 직후 재활성화를 소유자가 확인한다.
