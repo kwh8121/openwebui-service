@@ -89,3 +89,11 @@
 - **수동 체크리스트(사용자 확인, 로컬 누적 데이터·RC 이미지):** Google OAuth 로그인 `PASS` · pipelines 모델 채팅 `PASS`(middleware 필터 경로) · RAG 업로드·인용 `PASS`.
 - **여전히 `UNKNOWN`:** 프로덕션 Tool/Function 의 `langchain_community` 사용 — 로컬 DB 에 Tool/Function 이 없어 검증 불가. 배포 Issue 사전조건으로 넣었다(가이드 §2).
 - `docs/manual/kwh-deploy-guide-v0.11.4-kwh.1.md` 초안 작성. Pipelines `SKIPPED`/`check_pipelines=false`, 백업 결함 명시, 롤백 대상 `v0.11.3-kwh.1`. 태그 의존 값(SHA·digest·run·Issue 번호·최종 게이트)은 `<TBD>` — 최종 태그 후 문서 전용 PR 로 채우고 그 병합 커밋을 `guide_commit` 으로 쓴다.
+
+## 개발 에이전트 — 최종 태그 `v0.11.4-kwh.1` 발행 + 최종 게이트
+
+- PR #43(`integration/v0.11.4` → `main`) CI 전부 통과 후 `--merge` 병합(`e901f7724`). 최종 태그 `v0.11.4-kwh.1` 을 그 SHA 에 발행. GHCR 빌드 run `37579260460` success.
+- digest: index `sha256:23de12d4…2639`, amd64 `sha256:403d4880…a222`. parity 태그 `git-e901f77` 와 동일 digest 확인.
+- **최종 이미지 게이트 `PASS`** (`--no-backup`, 축적 데이터): 부팅 98초, upgrade 0건, `alembic current == heads`, integrity `ok`, `Koreatimes 0.11.4`, `version.json` = 태그 SHA, 로그 `Traceback`·`langchain` 0건.
+- ERROR 4건: 도구 서버 미접속 2건(기존과 동일) + `oauth_sessions` `InvalidToken` 2건. 후자는 로컬 브라우저의 이전 RC 세션 쿠키 요청 직후 발생·즉시 signout 처리됨. 원인은 추정이며 확정하지 못했다(가이드 §9에 `관측`으로 기록).
+- 가이드 `<TBD>` 를 채워 최종본으로 갱신(문서 전용 PR, 재빌드 불필요). 이후 배포 Issue 게시.

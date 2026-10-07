@@ -5,7 +5,7 @@
 §4~§6을 자동 수행하며, 이 문서는 그 입력값·기대 결과·제한을 규정한다.
 공통 절차·수동 fallback 명령은 [`kwh-deploy-guide-v0.11.3-kwh.1.md`](./kwh-deploy-guide-v0.11.3-kwh.1.md)와 같고, 이 문서는 **이번 릴리스에서 달라지는 점만** 적는다.
 
-> **상태:** `<TBD>` 표시 값은 최종 태그 발행·GHCR 빌드 후 문서 전용 PR로 채운다. `<TBD>`가 남아 있으면 배포 입력으로 쓰지 않는다. 승인 시각·Environment 승인은 별도이며 이 문서가 대신하지 않는다.
+> **상태:** 최종 태그·GHCR 빌드·최종 게이트 값이 채워진 최종본이다. 배포 Issue 번호만 Issue 생성 후 dispatch 입력으로 전달한다. 승인 시각·Environment 승인은 별도이며 이 문서가 대신하지 않는다.
 
 권위 순서: [협업 규약 Protocol v1.2.1](./github-control-plane-local-agent-handoff.ko.md) → [CI/CD 메커니즘](./github-actions-ghcr-release-deployment.md) → [릴리스 루틴](./kwh-release-routine.md) → 이 가이드. 충돌 시 앞선 문서가 이긴다. 시작 시 [핸드오프 문서](./kwh-release-handoff-v0.11.4-kwh.1.md)의 재판정 조건을 먼저 읽는다.
 
@@ -16,11 +16,12 @@
 | 항목                            | 값                                                                              |
 | ------------------------------- | ------------------------------------------------------------------------------- |
 | Version                         | **v0.11.4-kwh.1**                                                               |
-| Main tip SHA (태그 대상, 40자)  | `<TBD>`                                                                         |
+| Main tip SHA (태그 대상, 40자)  | `e901f7724f1cd2a6031b7671c83f9c891ece6d6a`                                      |
 | GHCR image tag (배포 대상)      | `ghcr.io/kwh8121/openwebui-service:v0.11.4-kwh.1`                               |
-| OCI index digest                | `<TBD>`                                                                         |
-| GHCR short-SHA parity tag       | `ghcr.io/kwh8121/openwebui-service:git-<TBD>`                                   |
-| GH Actions build Run            | `<TBD>`                                                                         |
+| OCI index digest                | `sha256:23de12d4ad185aa77df07efadebd71f181015b9c3b13b9c072d50b2ede8b2639`       |
+| linux/amd64 digest              | `sha256:403d48800d472a4ac74147ac7a14b3c2e87e741f0c288c2d73159cc2abafa222`       |
+| GHCR short-SHA parity tag       | `ghcr.io/kwh8121/openwebui-service:git-e901f77`                                 |
+| GH Actions build Run            | https://github.com/kwh8121/openwebui-service/actions/runs/37579260460           |
 | RC (참고용, 배포 대상 아님)     | `v0.11.4-kwh.1-rc.1` @ `5f3ede34c` — build run 37413977492                      |
 | Base upstream                   | Open WebUI `v0.11.4` (`8bd8b4fac`, 2026-09-21), `v0.11.3`에서 327 커밋·424 파일 |
 | Fork carryovers                 | Koreatimes 브랜드 자산, `WEBUI_NAME` 접미사 제거, `insertSuggestionPrompt=true` |
@@ -100,12 +101,12 @@ workflow의 `Stop openwebui and back up data` 스텝이 수행한다. **현행 �
 
 ### 5.1 Workflow dispatch
 
-| 입력              | 값                                                               |
-| ----------------- | ---------------------------------------------------------------- |
-| `tag`             | `v0.11.4-kwh.1`                                                  |
-| `issue_number`    | 이 릴리스의 `Production deployment request` Issue 번호 (`<TBD>`) |
-| `guide_commit`    | 이 가이드의 최종본을 담은 `main` 커밋 전체 SHA (`<TBD>`)         |
-| `check_pipelines` | **`false`** (§3.7)                                               |
+| 입력              | 값                                                                                        |
+| ----------------- | ----------------------------------------------------------------------------------------- |
+| `tag`             | `v0.11.4-kwh.1`                                                                           |
+| `issue_number`    | 이 릴리스의 `Production deployment request` Issue 번호 (Issue 생성 후 번호 확정)          |
+| `guide_commit`    | 이 가이드의 최종본을 담은 `main` 커밋 전체 SHA (이 가이드를 최종 반영한 `main` 병합 커밋) |
+| `check_pipelines` | **`false`** (§3.7)                                                                        |
 
 `production` Environment 보호 규칙에 따라 `kwh8121`의 실행별 승인 이후에만 실행된다. Issue 승인과 Environment 승인은 별개다.
 
@@ -170,15 +171,20 @@ workflow는 컨테이너 기동 **이전** 실패에만 이전 서비스를 자�
 
 ## 9. Evidence summary (개발 측)
 
-| 항목                                | 결과    | 비고                                                                                                   |
-| ----------------------------------- | ------- | ------------------------------------------------------------------------------------------------------ |
-| RC 자동 게이트                      | PASS    | 2026-10-06 부팅 98초 / 2026-10-07 재기동 163초, `/health` 200, upgrade 0건, `alembic current == heads` |
-| RC 수동: OAuth 로그인               | PASS    | 2026-10-07 사용자 확인 (RC 이미지, 로컬 누적 데이터)                                                   |
-| RC 수동: pipelines 채팅             | PASS    | 로컬 게이트의 pipelines 경유. 프로덕션 Pipelines와 무관                                                |
-| RC 수동: RAG 업로드·인용            | PASS    | 2026-10-07 사용자 확인                                                                                 |
-| 최종 태그 이미지 게이트             | `<TBD>` | 최종 태그 빌드 후 `./scripts/local-test.sh v0.11.4-kwh.1` 결과                                         |
-| 프로덕션 `langchain_community` 사용 | UNKNOWN | §2 사전조건. 로컬 DB에 Tool/Function 0개였다                                                           |
-| 프로덕션 Pipelines                  | SKIPPED | §3.7                                                                                                   |
-| 백업·복원 개선                      | 미구현  | §4                                                                                                     |
+| 항목                                | 결과    | 비고                                                                                                                                                                                                                                                                                                                                |
+| ----------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| RC 자동 게이트                      | PASS    | 2026-10-06 부팅 98초 / 2026-10-07 재기동 163초, `/health` 200, upgrade 0건, `alembic current == heads`                                                                                                                                                                                                                              |
+| RC 수동: OAuth 로그인               | PASS    | 2026-10-07 사용자 확인 (RC 이미지, 로컬 누적 데이터)                                                                                                                                                                                                                                                                                |
+| RC 수동: pipelines 채팅             | PASS    | 로컬 게이트의 pipelines 경유. 프로덕션 Pipelines와 무관                                                                                                                                                                                                                                                                             |
+| RC 수동: RAG 업로드·인용            | PASS    | 2026-10-07 사용자 확인                                                                                                                                                                                                                                                                                                              |
+| 최종 태그 이미지 게이트             | PASS    | 2026-10-07 `./scripts/local-test.sh v0.11.4-kwh.1`(`--no-backup`, 축적 데이터). 부팅 98초, `/health` 200, upgrade 0건, `alembic current == heads`(`d4c1a8e37b62`), integrity `ok`, `/api/config` `Koreatimes 0.11.4`, `/_app/version.json` = tag SHA, manifest `Koreatimes`. 로그 `Traceback`·`ModuleNotFoundError`·`langchain` 0건 |
+| 프로덕션 `langchain_community` 사용 | UNKNOWN | §2 사전조건. 로컬 DB에 Tool/Function 0개였다                                                                                                                                                                                                                                                                                        |
+| 프로덕션 Pipelines                  | SKIPPED | §3.7                                                                                                                                                                                                                                                                                                                                |
+| 백업·복원 개선                      | 미구현  | §4                                                                                                                                                                                                                                                                                                                                  |
 
 RC 결과를 최종 태그 이미지의 PASS로 대체하지 않는다.
+
+### 최종 게이트 로그의 ERROR 4건 (관측)
+
+- `get_tool_servers_data` / `get_tool_server_data` 2건: 로컬에 없는 프로덕션 도구 서버(`fastapi-tools-v2`) 미접속. 10-06 RC 게이트와 동일하며 비치명.
+- `oauth_sessions._decrypt_token` `InvalidToken` 및 `get_session_by_id` 각 2건: 로컬 브라우저에 남아 있던 이전(RC) 세션 쿠키 요청 직후 발생했고 곧바로 `/api/v1/auths/signout` 200으로 정리됐다. 새 컨테이너가 이전 세션의 저장 토큰을 복호화하지 못한 것으로 **추정**하나 원인은 확정하지 못했다. 프로덕션은 `WEBUI_SECRET_KEY`가 데이터 디렉터리에서 유지되므로(§6 `Generating new WEBUI_SECRET_KEY` 금지) 재현되지 않아야 하며, 배포 후 §7.1에서 기존 세션·로그인이 정상인지 확인한다. 기존 세션 사용자가 한 번 재로그인하는 정도는 롤백 사유가 아니다.
