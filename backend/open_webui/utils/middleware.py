@@ -4035,14 +4035,16 @@ async def background_tasks_handler(ctx):
                         except Exception as e:
                             pass
 
-        if messages:
+        # Memory review runs after a completed assistant turn. The title-only context
+        # built at chat creation (main.py) has no turn yet and no `model`.
+        if messages and ctx.get('assistant_message'):
             await review_memory_after_turn(
                 request=request,
                 user=user,
                 model=ctx['model'],
                 metadata=metadata,
                 form_data=form_data,
-                assistant_message=ctx.get('assistant_message') or {},
+                assistant_message=ctx['assistant_message'],
                 messages=messages,
             )
 
