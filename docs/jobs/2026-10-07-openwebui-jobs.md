@@ -97,3 +97,9 @@
 - **최종 이미지 게이트 `PASS`** (`--no-backup`, 축적 데이터): 부팅 98초, upgrade 0건, `alembic current == heads`, integrity `ok`, `Koreatimes 0.11.4`, `version.json` = 태그 SHA, 로그 `Traceback`·`langchain` 0건.
 - ERROR 4건: 도구 서버 미접속 2건(기존과 동일) + `oauth_sessions` `InvalidToken` 2건. 후자는 로컬 브라우저의 이전 RC 세션 쿠키 요청 직후 발생·즉시 signout 처리됨. 원인은 추정이며 확정하지 못했다(가이드 §9에 `관측`으로 기록).
 - 가이드 `<TBD>` 를 채워 최종본으로 갱신(문서 전용 PR, 재빌드 불필요). 이후 배포 Issue 게시.
+
+## 개발 에이전트 — 핸드오프 #2·#4 처리 (OpenCode 변경 검토 + workflow 대조)
+
+- **#2 `.opencode` 변경 검토(PR #42 diff):** 변경은 읽기 전용 `gh` 명령 4개의 allowlist 추가(완전 일치 문자열)와 출처 분류 확장(`docs/manual`·`docs/plan`·`docs/references`·`AGENTS.md`·`CLAUDE.md` → `historical context`, `openviking` → `unresolved`)뿐이다. 변형 명령 거부 테스트가 함께 추가됐다. `node --test .opencode/plugin/test/*.test.mjs` 로 **21/21 통과** 재확인(디렉터리 인자로 실행하면 `MODULE_NOT_FOUND` — 실행 방식 문제, 코드 문제 아님). 결함은 발견하지 못했다. 단 핸드오프가 밝힌 한계는 그대로다: 증적 파서·승인 댓글·Pipelines·mount·백업·디스크 조회 미완성, `.opencode/opencode.json` 미추적, `gh workflow run` allowlist 가 `-f` 입력을 받지 못함. **자동 `READY` 를 주장하지 않는다.**
+- **#4 workflow 대조:** `deploy-approved-production-release.yaml` 전문을 읽고 가이드와 대조. 서술은 일치했으나 가이드에 **누락 2건**이 있어 반영했다: (a) 백업 tar 가 `/app/pipelines` 를 포함하고 경로가 없으면 서비스 stop **이후** 실패(§3.5-2·§4), (b) workflow 는 image digest 를 Issue 와 대조하지 않고 기록만 하므로 dispatch 전 배포 에이전트가 대조해야 함(§3.5-1). 대조표는 가이드 Appendix.
+- 가이드가 바뀌므로 **`guide_commit` 이 갱신된다.** 새 병합 커밋 SHA 로 Issue #45 본문과 안내 댓글을 고친다.

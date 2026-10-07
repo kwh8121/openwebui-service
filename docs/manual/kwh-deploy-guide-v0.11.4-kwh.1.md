@@ -66,6 +66,8 @@ workflow의 검증 스텝이 자동 수행한다. 아래는 이번 릴리스에�
 - **3.3 현재 실행 이미지**를 기록한다. 기대값 `v0.11.3-kwh.1`. 다르면 실제 값이 rollback target이다.
 - **3.4 GHCR digest**: 최종 태그와 parity 태그가 같은 digest로 해석되고 §1 값과 일치해야 한다. 불일치 시 중단.
 - 3.5 `.env.openwebui.oauth`의 `WEBUI_NAME=Koreatimes`, `ENABLE_DB_MIGRATIONS` 미설정 여부는 v0.11.3 가이드 §3.5와 같다.
+- **3.5-1 digest 대조는 dispatch 전 배포 에이전트가 수행한다.** workflow는 `docker pull` 뒤 digest를 기록만 하고 Issue의 digest와 대조하지 않는다. §1 값과 다르면 dispatch하지 않는다.
+- **3.5-2 `/app/pipelines` 존재·읽기 가능 확인.** 백업 tar가 Pipelines 컨테이너 상태와 무관하게 `/app/pipelines`를 포함한다(§4). 경로가 없으면 서비스를 멈춘 **뒤에** tar가 실패한다.
 - **3.6 디스크**: 새 이미지(약 5~6 GB) + 백업 tar(데이터 약 3.7 GB) 동시 점유를 계산한다. 2026-10-07 관측 여유 약 24 GB는 배포 시점에 다시 확인한다.
 
 ### 3.7 Pipelines — **이번 배포에서 제외 (`SKIPPED`)**
@@ -82,7 +84,7 @@ workflow의 검증 스텝이 자동 수행한다. 아래는 이번 릴리스에�
 
 ## 4. Pre-deployment backup — 알려진 결함
 
-workflow의 `Stop openwebui and back up data` 스텝이 수행한다. **현행 절차를 그대로 쓰며 이번 릴리스에서 개선하지 않았다.** 아래 한계를 승인자가 알고 승인해야 한다.
+workflow의 `Stop openwebui and back up data` 스텝이 수행한다(2026-10-07 `deploy-approved-production-release.yaml`을 직접 읽어 대조). 실제 명령은 `docker compose stop openwebui` → `tar -czf <백업> -C /home/ubuntu/openwebui openwebui -C /app pipelines` → `tar -tzf` 목록 검증이며, **아카이브는 `openwebui/`와 `/app/pipelines`만 포함**한다. **현행 절차를 그대로 쓰며 이번 릴리스에서 개선하지 않았다.** 아래 한계를 승인자가 알고 승인해야 한다.
 
 | 결함                        | 내용                                                        | 영향                                                                |
 | --------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------- |
@@ -188,3 +190,27 @@ RC 결과를 최종 태그 이미지의 PASS로 대체하지 않는다.
 
 - `get_tool_servers_data` / `get_tool_server_data` 2건: 로컬에 없는 프로덕션 도구 서버(`fastapi-tools-v2`) 미접속. 10-06 RC 게이트와 동일하며 비치명.
 - `oauth_sessions._decrypt_token` `InvalidToken` 및 `get_session_by_id` 각 2건: 로컬 브라우저에 남아 있던 이전(RC) 세션 쿠키 요청 직후 발생했고 곧바로 `/api/v1/auths/signout` 200으로 정리됐다. 새 컨테이너가 이전 세션의 저장 토큰을 복호화하지 못한 것으로 **추정**하나 원인은 확정하지 못했다. 프로덕션은 `WEBUI_SECRET_KEY`가 데이터 디렉터리에서 유지되므로(§6 `Generating new WEBUI_SECRET_KEY` 금지) 재현되지 않아야 하며, 배포 후 §7.1에서 기존 세션·로그인이 정상인지 확인한다. 기존 세션 사용자가 한 번 재로그인하는 정도는 롤백 사유가 아니다.
+
+---
+
+## Appendix. workflow 대조 결과 (2026-10-07, 개발 측)
+
+`deploy-approved-production-release.yaml`을 읽어 이 가이드의 서술과 대조했다.
+
+| 가이드 서술                                                         | workflow 실제                                                                                                     | 일치                        |
+| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| dispatch 입력 `tag`·`issue_number`·`guide_commit`·`check_pipelines` | 동일(`check_pipelines`는 `required`, 기본 `true`)                                                                 | 일치                        |
+| 태그는 main 계보, 가이드는 `guide_commit`에 존재                    | `compare/<tag>...main`이 `identical`/`ahead`, `contents/docs/manual/kwh-deploy-guide-<tag>.md?ref=<guide_commit>` | 일치                        |
+| 서비스 stop 후 압축                                                 | `stop openwebui` 뒤 `tar`                                                                                         | 일치                        |
+| 아카이브에 `.env.openwebui.oauth` 없음                              | `openwebui`와 `/app pipelines`만 포함                                                                             | 일치                        |
+| `compose pull` 반복                                                 | `docker pull` 뒤 `compose pull openwebui` 재실행                                                                  | 일치                        |
+| `/health` 300초·5초 간격                                            | `HEALTH_TIMEOUT_SECONDS=300`, 폴링 5초                                                                            | 일치                        |
+| 기동 이전 실패에만 자동 복구, 이후 자동 롤백 없음                   | `if: failure() && STOPPED && !NEW_CONTAINER_STARTED`, 실패 댓글은 "auto-rollback NOT performed"                   | 일치                        |
+| `check_pipelines=false` → `SKIPPED`                                 | `PIPELINES_STATUS=SKIPPED (intentionally disabled)`. Pipelines 컨테이너는 건드리지 않음(`--no-deps`)              | 일치                        |
+| (가이드 누락이었음) 백업에 `/app/pipelines` 포함                    | tar 대상. 경로 부재 시 stop 이후 실패                                                                             | **이번에 §3.5-2·§4에 반영** |
+| (가이드 누락이었음) digest 대조                                     | workflow는 기록만, Issue와 대조하지 않음                                                                          | **이번에 §3.5-1에 반영**    |
+
+참고:
+
+- 기동 후 스모크는 로그 최근 100줄에서 `Traceback|Failed to start|sqlalchemy.exc`만 검사한다. `langchain_community` 오류가 `Traceback` 없이 로그에 남으면 이 검사로 잡히지 않으므로 §7.4의 Tools/Functions 확인이 필요하다.
+- `.opencode` 허용 목록의 `gh workflow run`은 입력(`-f`)을 받지 못한다. dispatch 입력은 소유자가 GitHub UI에서 직접 넣어야 한다.
