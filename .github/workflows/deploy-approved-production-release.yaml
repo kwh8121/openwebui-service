@@ -128,16 +128,15 @@ jobs:
                 OPENWEBUI_LOCAL_DATA="${DATA_DIR}" \
                 OPENWEBUI_DEPLOY_ENV_FILE="${ENV_FILE}" \
                 PIPELINES_LOCAL_DATA="${PIPELINES_DATA}" \
-                docker compose -f "${COMPOSE_FILE}" -p "${COMPOSE_PROJECT}" ps -q openwebui 2>/dev/null || true)
+                docker compose -f "${COMPOSE_FILE}" -p "${COMPOSE_PROJECT}" ps -q openwebui)
           if [[ -z "$cid" ]]; then
-            echo "::warning::no running openwebui container detected; rollback target unknown"
-            echo "CURRENT_IMAGE=unknown" >> "$GITHUB_ENV"
-          else
-            current=$(docker inspect "$cid" --format '{{.Config.Image}}')
-            echo "Currently running: $current"
-            echo "CURRENT_IMAGE=$current" >> "$GITHUB_ENV"
-            echo "CURRENT_TAG=${current##*:}" >> "$GITHUB_ENV"
+            echo "::error::no running openwebui container detected; cannot establish rollback target"
+            exit 1
           fi
+          current=$(docker inspect "$cid" --format '{{.Config.Image}}')
+          echo "Currently running: $current"
+          echo "CURRENT_IMAGE=$current" >> "$GITHUB_ENV"
+          echo "CURRENT_TAG=${current##*:}" >> "$GITHUB_ENV"
 
       # ─── Pull new image and pin digest ─────────────────────────────
       - name: Pull new image
@@ -155,10 +154,10 @@ jobs:
           set -euo pipefail
           cd "${DEPLOY_DIR}"
           ts=$(date +%Y%m%d-%H%M%S)
-          suffix="${CURRENT_TAG:-unknown}"
+          suffix="${CURRENT_TAG}"
           backup_path="${BACKUP_DIR}/prod-backup-preupgrade-${ts}-${suffix}.tar.gz"
           env_copy_path="${BACKUP_DIR}/prod-backup-preupgrade-${ts}-${suffix}.env"
-          export OPENWEBUI_IMAGE_TAG="${CURRENT_TAG:-${{ inputs.tag }}}"
+          export OPENWEBUI_IMAGE_TAG="${CURRENT_TAG}"
           export OPENWEBUI_LOCAL_DATA="${DATA_DIR}"
           export OPENWEBUI_DEPLOY_ENV_FILE="${ENV_FILE}"
           export PIPELINES_LOCAL_DATA="${PIPELINES_DATA}"
@@ -171,6 +170,7 @@ jobs:
           # failed copy aborts while the service is still running. The archive itself does
           # not contain it. Contents are never printed; only the path and mode are logged.
           install -m 600 "${ENV_FILE}" "${env_copy_path}"
+          echo "BACKUP_ENV_COPY_PATH=${env_copy_path}" >> "$GITHUB_ENV"
 
           docker compose -f "${COMPOSE_FILE}" -p "${COMPOSE_PROJECT}" stop openwebui
           echo "OPENWEBUI_STOPPED=true" >> "$GITHUB_ENV"
@@ -191,7 +191,6 @@ jobs:
           size=$(du -h "${backup_path}" | cut -f1)
           {
             echo "BACKUP_PATH=${backup_path}"
-            echo "BACKUP_ENV_COPY_PATH=${env_copy_path}"
             echo "BACKUP_SIZE=${size}"
           } >> "$GITHUB_ENV"
           echo "Backup: ${backup_path} (${size}, mode 600)"
@@ -222,8 +221,7 @@ jobs:
           export OPENWEBUI_LOCAL_DATA="${DATA_DIR}"
           export OPENWEBUI_DEPLOY_ENV_FILE="${ENV_FILE}"
           export PIPELINES_LOCAL_DATA="${PIPELINES_DATA}"
-          docker compose -f "${COMPOSE_FILE}" -p "${COMPOSE_PROJECT}" pull openwebui
-          docker compose -f "${COMPOSE_FILE}" -p "${COMPOSE_PROJECT}" up -d --no-deps openwebui
+          docker compose -f "${COMPOSE_FILE}" -p "${COMPOSE_PROJECT}" up -d --no-deps --pull never openwebui
           echo "NEW_CONTAINER_STARTED=true" >> "$GITHUB_ENV"
 
       - name: Restore previous service after pre-start failure
@@ -240,6 +238,7 @@ jobs:
           export OPENWEBUI_DEPLOY_ENV_FILE="${ENV_FILE}"
           export PIPELINES_LOCAL_DATA="${PIPELINES_DATA}"
           docker compose -f "${COMPOSE_FILE}" -p "${COMPOSE_PROJECT}" up -d --no-deps openwebui
+          echo "ROLLBACK_STATUS=previous image restarted (health unverified)" >> "$GITHUB_ENV"
 
       # ─── Migration monitoring + /health polling ────────────────────
       - name: Wait for /health (Alembic runs during boot)
@@ -281,7 +280,10 @@ jobs:
             exit 1
           fi
           logs_file="${RUNNER_TEMP}/openwebui-last-100.log"
-          docker compose -f "${COMPOSE_FILE}" -p "${COMPOSE_PROJECT}" logs --tail 100 openwebui >"${logs_file}" 2>&1 || true
+          if ! docker compose -f "${COMPOSE_FILE}" -p "${COMPOSE_PROJECT}" logs --tail 100 openwebui >"${logs_file}" 2>&1; then
+            echo "::error::failed to collect openwebui logs; see ${logs_file}"
+            exit 1
+          fi
           if grep -Eiq 'Traceback|Failed to start|sqlalchemy\.exc' "${logs_file}"; then
             echo "::error::startup error keywords detected in openwebui logs"
             exit 1
@@ -300,6 +302,7 @@ jobs:
 
           Image digest: \`${NEW_DIGEST}\`
           Backup retention: \`${BACKUP_PATH}\`
+          Env file copy: \`${BACKUP_ENV_COPY_PATH}\` (mode 600, contents not logged)
           Technical smoke: PASS (container running, health/version/manifest, logs clean). Pipelines: ${PIPELINES_STATUS}
           Guide followed: \`${GUIDE_PATH}\` at commit \`${{ inputs.guide_commit }}\`
           Awaiting user browser acceptance: OAuth, model chat, upload/RAG, branding/splash, custom tools as applicable.
@@ -311,8 +314,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Report failure without auto-rollback. Per handoff §"장애 처리와 권한",
-          # rollback authority depends on the failure stage; the maintainer decides.
+          # Pre-start failures may restart the previous image above. After the
+          # new container starts, rollback requires a maintainer incident decision.
           gh issue comment ${{ inputs.issue_number }} \
             --repo "${{ github.repository }}" \
             --body "$(cat <<EOF
@@ -320,10 +323,11 @@ jobs:
 
           Run logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           Stage: see step summary in the run
-          Rollback status: halted for incident decision (auto-rollback NOT performed)
+          Rollback status: ${ROLLBACK_STATUS:-halted for incident decision}
           Guide section: refer to \`docs/manual/kwh-deploy-guide-${{ inputs.tag }}.md\` for §8 rollback options
           Previous image (rollback target): \`${CURRENT_IMAGE:-unknown}\`
           Backup (if backup step reached): \`${BACKUP_PATH:-not-created}\`
+          Env file copy (if created): \`${BACKUP_ENV_COPY_PATH:-not-created}\`
           Next action required: maintainer decision per handoff §"장애 처리와 권한"
           EOF
           )"
