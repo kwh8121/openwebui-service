@@ -12,6 +12,9 @@ Claude Code가 세션 시작 시 이 파일을 자동으로 읽습니다. 이 �
 - **Node는 `nvm use 22`**로 전환 후 사용합니다 (프로젝트 engine-strict `<=22.x`, 기본 PATH에는 Node 24가 잡혀 있음).
 - **`gh` 명령에는 항상 `--repo kwh8121/openwebui-service`를 붙입니다.** `upstream` 리모트 때문에 `gh`가 기본적으로 upstream 저장소를 가리켜 PR 생성이 실패합니다.
 - **검증 목적 명령은 절대 경로로 호출합니다** (`./node_modules/.bin/prettier`, `/usr/bin/curl`). `rtk` 훅이 결과를 위조한 사례가 있습니다.
+- **`rtk`는 `git` 출력도 가공할 수 있습니다.** 브랜치 병합·삭제 판단(`merge-base`, `rev-list --count`)은 `/usr/bin/git`으로 확인합니다. rtk 경유 시 "고유 커밋 1건"이 실제로는 0건이던 사례가 있습니다.
+- **`gh pr edit`는 실패합니다** (Projects classic 폐지 GraphQL 오류). PR·Issue 본문 수정은 `gh api -X PATCH repos/kwh8121/openwebui-service/pulls/<N> -F body=@file`을 씁니다.
+- **`main` 병합은 배포·서비스 중단을 일으키지 않습니다** (이미지는 `v*-kwh.*` 태그에서만 빌드, 배포는 `workflow_dispatch`만). `integration/*`는 ruleset으로 **삭제가 금지**돼 있습니다 — 브랜치 정리 전에 `gh api repos/kwh8121/openwebui-service/rulesets`를 봅니다.
 
 전체 제약 목록은 `AGENTS.md` §"로컬 환경 제약"에 있습니다.
 
