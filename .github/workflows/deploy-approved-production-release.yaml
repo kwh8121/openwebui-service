@@ -157,10 +157,20 @@ jobs:
           ts=$(date +%Y%m%d-%H%M%S)
           suffix="${CURRENT_TAG:-unknown}"
           backup_path="${BACKUP_DIR}/prod-backup-preupgrade-${ts}-${suffix}.tar.gz"
+          env_copy_path="${BACKUP_DIR}/prod-backup-preupgrade-${ts}-${suffix}.env"
           export OPENWEBUI_IMAGE_TAG="${CURRENT_TAG:-${{ inputs.tag }}}"
           export OPENWEBUI_LOCAL_DATA="${DATA_DIR}"
           export OPENWEBUI_DEPLOY_ENV_FILE="${ENV_FILE}"
           export PIPELINES_LOCAL_DATA="${PIPELINES_DATA}"
+
+          # Backups hold the DB and the OAuth env file: create every file owner-only
+          # from the start (no 0644 window, also on failure paths).
+          umask 077
+
+          # Preserve the env file next to the archive BEFORE stopping the service, so a
+          # failed copy aborts while the service is still running. The archive itself does
+          # not contain it. Contents are never printed; only the path and mode are logged.
+          install -m 600 "${ENV_FILE}" "${env_copy_path}"
 
           docker compose -f "${COMPOSE_FILE}" -p "${COMPOSE_PROJECT}" stop openwebui
           echo "OPENWEBUI_STOPPED=true" >> "$GITHUB_ENV"
@@ -170,10 +180,22 @@ jobs:
           tar -czf "${backup_path}" -C "${DEPLOY_DIR}" openwebui -C /app pipelines
           tar -tzf "${backup_path}" >/dev/null
 
+          for protected in "${backup_path}" "${env_copy_path}"; do
+            mode=$(stat -c '%a' "${protected}")
+            if [[ "${mode}" != "600" ]]; then
+              echo "::error::${protected} has mode ${mode}, expected 600"
+              exit 1
+            fi
+          done
+
           size=$(du -h "${backup_path}" | cut -f1)
-          echo "BACKUP_PATH=${backup_path}" >> "$GITHUB_ENV"
-          echo "BACKUP_SIZE=${size}" >> "$GITHUB_ENV"
-          echo "Backup: ${backup_path} (${size})"
+          {
+            echo "BACKUP_PATH=${backup_path}"
+            echo "BACKUP_ENV_COPY_PATH=${env_copy_path}"
+            echo "BACKUP_SIZE=${size}"
+          } >> "$GITHUB_ENV"
+          echo "Backup: ${backup_path} (${size}, mode 600)"
+          echo "Env copy: ${env_copy_path} (mode 600)"
 
       - name: Post checkpoint comment
         env:
@@ -184,7 +206,8 @@ jobs:
             --body "$(cat <<EOF
           ## Deployment checkpoint
 
-          Backup: \`${BACKUP_PATH}\` (${BACKUP_SIZE})
+          Backup: \`${BACKUP_PATH}\` (${BACKUP_SIZE}, mode 600)
+          Env file copy: \`${BACKUP_ENV_COPY_PATH}\` (mode 600, contents not logged)
           Migrations: applying (in progress)
           Health polling: not started (compose up next)
           EOF
