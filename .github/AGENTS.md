@@ -17,10 +17,10 @@ GitHub-specific repo configuration: CI/CD workflows, issue and PR templates, Dep
 
 ## Subdirectories
 
-| Directory         | Purpose                                                                                                                   |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `ISSUE_TEMPLATE/` | Structured issue forms for bug reports, feature requests, etc.                                                            |
-| `workflows/`      | GitHub Actions workflows — active `backend.yaml`, `frontend.yaml`, `docker.yaml`, plus disabled upstream release variants |
+| Directory         | Purpose                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `ISSUE_TEMPLATE/` | Structured issue forms for bug reports, feature requests, etc.                                                                                                                                                                                                                                                                                                                                                                 |
+| `workflows/`      | GitHub Actions workflows — active `backend.yaml`, `frontend.yaml` (CI checks), `regression.yaml`, `issue-label.yaml`, `docker.yaml` (builds GHCR images on `v*-kwh.*` tags only), and `deploy-approved-production-release.yaml` (`workflow_dispatch` only, runs on the production runner: backup, image swap, health check; per-release steps in `docs/manual/kwh-deploy-guide-*.md`), plus disabled upstream release variants |
 
 ## For AI Agents
 
