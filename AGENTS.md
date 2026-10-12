@@ -51,6 +51,9 @@
 - `npm run lint:frontend`, `npm run format`, `npm run i18n:parse`는 파일을 수정합니다. 마지막 명령은 `src/lib/i18n`을 재생성하므로, 번역 대상 문자열을 바꾼 뒤 실행하고 그 산출물을 함께 커밋합니다.
 - CI는 `npm run format` → `npm run i18n:parse` 순으로 실행한 뒤 clean tree를 요구하고 빌드합니다. 변경을 일으키지 않는 프론트엔드 포맷 검사가 필요할 때는 `npx prettier --check <files>`를 사용합니다.
 - 백엔드 CI는 `ruff format --check . --exclude .venv --exclude venv`입니다. 백엔드 수정은 `npm run format:backend`로 포맷합니다. `npm run lint:backend`는 `backend/` 전체에 Pylint를 실행합니다.
+- 백엔드 테스트(`backend/open_webui/test/`)는 CI에서 실행되지 않고 로컬에 의존성도 없습니다. 릴리스 이미지 안에서 작업 트리를 읽기 전용으로 마운트해 실행합니다(이미지에 pytest가 없어 `pip install --target`으로 임시 설치): `docker run --rm --entrypoint sh -e WEBUI_SECRET_KEY=test -e DATA_DIR=/tmp/d -e ENABLE_DB_MIGRATIONS=false -v "$PWD/backend/open_webui:/app/backend/open_webui:ro" -w /app/backend ghcr.io/kwh8121/openwebui-service:<tag> -c 'pip install -q --target /tmp/pt pytest && PYTHONPATH=/tmp/pt python -m pytest open_webui/test -q -p no:cacheprovider'`. `middleware` import 때문에 1~1.5분 걸립니다(실측 75초). `ENABLE_DB_MIGRATIONS=false`가 없으면 수집 단계에서 `sqlalchemy.exc`로 실패합니다.
+- 컨테이너에서 ruff를 돌릴 때는 저장소 **루트**를 마운트하고 `--no-cache`를 씁니다. `backend`만 마운트하면 루트 `pyproject.toml`(line-length 120, single quote)이 적용되지 않아 "재포맷 필요"로 오탐합니다.
+- `.opencode` 플러그인 테스트는 `node --test .opencode/plugin/test/*.test.mjs`입니다 (디렉터리를 인자로 주면 `MODULE_NOT_FOUND`).
 
 ## 전달 제약
 

@@ -9,15 +9,15 @@ Python FastAPI backend for Open WebUI. This directory is a thin wrapper: entry s
 
 ## Key Files
 
-| File                   | Description                                                                      |
-| ---------------------- | -------------------------------------------------------------------------------- |
-| `dev.sh`               | Local reload server on port 8080; allows the Vite dev origin for full-stack work |
-| `start.sh`             | Production entry script used by the container image                              |
-| `start_windows.bat`    | Windows equivalent of `start.sh`                                                 |
-| `requirements.txt`     | Frozen full runtime dependencies (mirrors `pyproject.toml`)                      |
-| `requirements-min.txt` | Minimal dependency set for lean installs                                         |
-| `.dockerignore`        | Paths excluded when building the backend image                                   |
-| `.gitignore`           | Backend-specific ignores (e.g. `data/`, `.webui_secret_key`)                     |
+| File                    | Description                                                                      |
+| ----------------------- | -------------------------------------------------------------------------------- |
+| `dev.sh`                | Local reload server on port 8080; allows the Vite dev origin for full-stack work |
+| `start.sh`              | Production entry script used by the container image                              |
+| `start_windows.bat`     | Windows equivalent of `start.sh`                                                 |
+| `requirements.txt`      | Frozen full runtime dependencies (mirrors `pyproject.toml`)                      |
+| `requirements-slim.txt` | Dependency set for the slim image variant (`USE_SLIM`)                           |
+| `.dockerignore`         | Paths excluded when building the backend image                                   |
+| `.gitignore`            | Backend-specific ignores (e.g. `data/`, `.webui_secret_key`)                     |
 
 ## Subdirectories
 
@@ -39,6 +39,7 @@ Python FastAPI backend for Open WebUI. This directory is a thin wrapper: entry s
 - Backend format check: `ruff format --check . --exclude .venv --exclude venv`.
 - Apply fixes with `npm run format:backend` from the repo root.
 - Lint: `npm run lint:backend` (Pylint across `backend/`).
+- Backend tests live in `open_webui/test/` and are not run by CI or installed locally; run them inside the release image — see root `AGENTS.md` §"검증 및 포매팅".
 
 ### Common Patterns
 
