@@ -58,7 +58,9 @@ jobs:
           file: ${{ runner.temp }}/Dockerfile
           push: true
           platforms: linux/amd64
-          build-args: BUILD_HASH=${{ github.sha }}
+          build-args: |
+            BUILD_HASH=${{ github.sha }}
+            BUILD_CHANNEL=main
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache-amd64
