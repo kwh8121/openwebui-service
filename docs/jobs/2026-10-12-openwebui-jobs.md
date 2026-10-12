@@ -51,3 +51,32 @@
 3. 가이드 최종본(문서 전용 PR) — `<TBD>` 채움, workflow 재대조, `guide_commit` 확정.
 4. 프로덕션 규모 마이그레이션 시간·백업 복원 시험은 배포 승인 전 소유자와 논의 필요(가이드 §4·§8).
 5. 로컬 게이트 컨테이너(8082/9099)는 실행 중. 최종 게이트 전 `./scripts/local-test.sh --down`.
+
+## 19:46 UTC — 최종 태그 `v0.12.0-kwh.1` 발행 + 최종 이미지 게이트 + 가이드 최종본 (개발 에이전트)
+
+### 수행
+
+1. PR #56(`integration/v0.12.0` → `main`) CI 5건 green 확인 후 ready·`--merge` 병합(`b7a661939`). 병합 후 `main` CI 4건도 green.
+2. 사용자 승인 후 최종 태그 `v0.12.0-kwh.1`(annotated) → `b7a66193917b8344ff928c996171b99089dba12f` 발행. 발행 직전 `origin/main`이 그 SHA인지와 태그 미존재를 스크립트로 확인했다. GHCR 빌드 run 38236137881 success(headSha 일치).
+3. digest: index `sha256:cd4957b2…c985`, linux/amd64 `sha256:24581534…ee25`. 최종 태그와 `git-b7a6619`가 같은 index digest로 해석됨(양쪽 `docker pull` 후 `RepoDigests` 비교).
+4. **최종 이미지 게이트 `[PASS]`**: `./scripts/local-test.sh v0.12.0-kwh.1 --health-timeout 900`(기본 모드, 자동 백업 포함). 부팅 71초, 마이그레이션 6건, `alembic current == heads`(`b8f2c6d91a04`), integrity `ok`, pipelines 응답. 컨테이너 이미지 digest가 index digest와 일치, 기동 로그 `Commit: b7a66193…`. 로그 59줄 `Traceback`·`KeyError`·`ModuleNotFoundError` 0건, `ERROR`는 도구 서버 DNS 2건(#48)뿐.
+5. 마이그레이션 후 DB(읽기 전용 조회): `model` 369 → `model_history` 369, `version_id` NULL 0건, 사용자 3·채팅 6 유지.
+
+### 판단 기록
+
+- **RC 게이트 이후 데이터는 이미 `b8f2c6d91a04`였다.** 그대로 최종 이미지를 띄우면 마이그레이션 0건이라 최종 이미지가 6건을 적용하는 경로가 검증되지 않는다. 사용자가 "기본 모드(누적 데이터)"를 택한 근거가 메이저 점프 마이그레이션 검증이었으므로, RC 직전 백업(`20261012-184618-v0.12.0-kwh.1-rc.1`)으로 data 디렉터리를 복원한 뒤 게이트를 돌렸다. 복원 전 revision `d4c1a8e37b62`·integrity `ok`를 읽기 전용으로 확인했다.
+- `--restore`는 data·pipelines 백업의 타임스탬프가 같아야 한다. RC 백업은 data `184618`·pipelines `184750`으로 달라 그대로 쓸 수 없었다. 스크립트를 고치지 않고 `--restore`와 같은 동작(현재 디렉터리를 `.rolled-back-…`으로 옮겨 보존 후 추출)을 data 디렉터리에만 수행했다. 보존본은 `~/openwebui-local-test-data.rolled-back-20261012-193551`(RC 이후 상태, RC 때 만든 테스트 채팅 포함). pipelines 디렉터리는 alembic 대상이 아니라 그대로 뒀다.
+
+### 발견·한계
+
+- **`skill`·`tool`·`function` backfill은 실제 행으로 시험되지 않았다.** 로컬 DB에 세 테이블이 모두 0건이다. `model` 경로(369행)만 검증됐다. 프로덕션에 도구·함수·스킬이 있으면 처음 실행되는 코드이므로 가이드 §7.2·§9에 명시했다.
+- 이 호스트에는 `docker buildx`가 없다(`docker: unknown command: docker buildx`). digest는 `docker manifest inspect`와 `docker pull`의 `RepoDigests`로 확인했다. 첫 시도에서 이 사실을 모르고 출력 파싱 실패로 오진할 뻔했다.
+- 최종 게이트는 자동 검사만 수행했다(수동 체크는 RC에서 수행, 지난 사이클과 동일).
+- 프로덕션 규모(약 3.7 GB) 마이그레이션 시간, 백업 복원, DB downgrade는 여전히 미검증·미시험이다.
+
+### 다음 재개 지점
+
+1. 가이드 최종본 문서 전용 PR(`feature/docs-v0120-deploy-guide-final` → `integration/v0.12.0` → `main`) 병합 후, 그 `main` 커밋 SHA가 `guide_commit`.
+2. 배포 요청 Issue(`Production deployment request`) 제출 — 소유자 승인 필요. `check_pipelines`는 Issue에서 확정(가이드 §3.7). 배포 전 프로덕션의 Model/Tool/Function/Skill 개수 기록, 현재 revision `d4c1a8e37b62` 확인.
+3. 소유자 논의: 백업 복원 시험(가이드 §8이 복원을 기본 복구 경로로 가정), 프로덕션 규모 마이그레이션 시간.
+4. 로컬 게이트 컨테이너(8082/9099)는 실행 중. 확인 후 `./scripts/local-test.sh --down`. `.rolled-back-20261012-193551`은 필요 없으면 삭제.
