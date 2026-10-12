@@ -1,0 +1,24 @@
+# Exercise deployment shell steps with mocked commands on GitHub-hosted runners.
+# This workflow never uses the production runner or dispatches a deployment.
+name: Deployment workflow tests
+
+on:
+  pull_request:
+    branches:
+      - main
+      - 'integration/v*'
+    paths:
+      - '.github/workflows/deploy-approved-production-release.yaml'
+      - '.github/workflows/deploy-backup-workflow-tests.yaml'
+      - '.github/tests/test_deploy_backup_workflow.py'
+
+permissions:
+  contents: read
+
+jobs:
+  backup-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Run mocked deployment step tests
+        run: python3 -m unittest discover -s .github/tests -p 'test_deploy_backup_workflow.py' -v
