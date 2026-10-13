@@ -5,7 +5,7 @@
 §4~§6을 자동 수행하며, 이 문서는 그 입력값·기대 결과·제한을 규정한다.
 공통 절차·수동 fallback 명령은 [`kwh-deploy-guide-v0.11.3-kwh.1.md`](./kwh-deploy-guide-v0.11.3-kwh.1.md)와 같고, 이 문서는 **이번 릴리스에서 달라지는 점만** 적는다.
 
-> **상태: 초안.** `<TBD>` 표시는 최종 태그·GHCR 빌드·최종 게이트 이후 채운다. 초안으로는 배포 요청을 제출하지 않는다.
+> **상태: 최종본.** 최종 태그·GHCR 빌드·최종 게이트 값이 채워졌다. 배포 Issue 번호는 Issue 생성 후 dispatch 입력으로 전달한다. 프로덕션 Pipelines 처리(§3.7)는 소유자가 배포 요청 Issue에서 정한다. 승인 시각·Environment 승인은 별도이며 이 문서가 대신하지 않는다.
 > **이전 릴리스(`v0.11.4-kwh.1`)와 근본적으로 다른 점: 스키마 마이그레이션 6건이 실행되며, 이미지 롤백만으로는 복구되지 않는다(§8).**
 
 권위 순서: [협업 규약 Protocol v1.2.1](./github-control-plane-local-agent-handoff.ko.md) → [CI/CD 메커니즘](./github-actions-ghcr-release-deployment.md) → [릴리스 루틴](./kwh-release-routine.md) → 이 가이드. 충돌 시 앞선 문서가 이긴다.
@@ -17,18 +17,20 @@
 | 항목                            | 값                                                                              |
 | ------------------------------- | ------------------------------------------------------------------------------- |
 | Version                         | **v0.12.0-kwh.1**                                                               |
-| Main tip SHA (태그 대상, 40자)  | `<TBD>`                                                                         |
+| Main tip SHA (태그 대상, 40자)  | `b7a66193917b8344ff928c996171b99089dba12f`                                      |
 | GHCR image tag (배포 대상)      | `ghcr.io/kwh8121/openwebui-service:v0.12.0-kwh.1`                               |
-| OCI index digest                | `<TBD>`                                                                         |
-| linux/amd64 digest              | `<TBD>`                                                                         |
-| GHCR short-SHA parity tag       | `ghcr.io/kwh8121/openwebui-service:git-<TBD>`                                   |
-| GH Actions build Run            | `<TBD>`                                                                         |
+| OCI index digest                | `sha256:cd4957b2d23de3632f3cbf06d6c165702599962e8b7034be275e7414caf1c985`       |
+| linux/amd64 digest              | `sha256:24581534e928cb4cb691921a8a12ac50269d1b40dd87773331829d064aa2ee25`       |
+| GHCR short-SHA parity tag       | `ghcr.io/kwh8121/openwebui-service:git-b7a6619`                                 |
+| GH Actions build Run            | https://github.com/kwh8121/openwebui-service/actions/runs/38236137881           |
 | RC (참고용, 배포 대상 아님)     | `v0.12.0-kwh.1-rc.1` @ `68baf382c` — build run 38230963520                      |
 | Base upstream                   | Open WebUI `v0.12.0` (`15818d88f`, 2026-10-10), `v0.11.4`에서 584 커밋·542 파일 |
 | Fork carryovers                 | Koreatimes 브랜드 자산, `WEBUI_NAME` 접미사 제거, `insertSuggestionPrompt=true` |
 | Rollback target (현재 프로덕션) | `ghcr.io/kwh8121/openwebui-service:v0.11.4-kwh.1` (실제 값은 §3.3에서 재확인)   |
 
 `latest`·`main`·RC 태그를 배포하지 않는다. immutable 최종 태그 또는 git-SHA parity 태그만 유효하다.
+
+digest 확인 방법(개발 측): 개발 머신에는 `docker buildx`가 없어 `docker manifest inspect ghcr.io/kwh8121/openwebui-service:v0.12.0-kwh.1`로 index와 amd64 항목을 읽고, 최종 태그와 `git-b7a6619`를 각각 `docker pull`한 뒤 `RepoDigests`가 같음을 확인했다. amd64 항목 옆의 `unknown/unknown`은 sbom/provenance attestation이다. 이 digest가 §3.5-1 대조의 기준이다.
 
 ---
 
@@ -151,7 +153,7 @@ v0.11.3 가이드 §5.2의 명령을 `OPENWEBUI_IMAGE_TAG=v0.12.0-kwh.1`로 바�
 
 - [ ] 배포 전 채팅 이력·사용자 설정·Knowledge 목록 유지
 - [ ] alembic revision = `b8f2c6d91a04`, SQLite `PRAGMA integrity_check` = `ok`
-- [ ] **기존 Model/Tool/Function/Skill 개수가 배포 전과 같다** (마이그레이션이 이들 행을 갱신한다). 워크스페이스의 커스텀 모델·도구 목록을 배포 전에 기록해 둔다.
+- [ ] **기존 Model/Tool/Function/Skill 개수가 배포 전과 같다** (마이그레이션이 이들 행을 갱신한다). 워크스페이스의 커스텀 모델·도구·함수·스킬 목록과 개수를 배포 전에 기록해 둔다. 로컬 게이트는 `model` 369행만 검증했고 `skill`·`tool`·`function` backfill은 실제 행으로 시험되지 않았다(§9).
 
 ### 7.3 Fork carryovers
 
@@ -200,19 +202,20 @@ workflow는 컨테이너 기동 **이전** 실패에만 이전 서비스를 자�
 
 ## 9. Evidence summary (개발 측)
 
-| 항목                                          | 결과    | 비고                                                                                                                                                                                                         |
-| --------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 정적 검사 (병합 브랜치)                       | PASS    | `npm ci`(Node 22), `i18n:parse` 변경 0건, prettier(존재 파일) 통과, vitest 4/4, ruff 추적 파일 363개 통과, `svelte-check` 6,040건(기준선 약 7,800) 중 수정 파일 신규 오류 0건                                |
-| RC 자동 게이트                                | PASS    | 2026-10-12 `./scripts/local-test.sh v0.12.0-kwh.1-rc.1 --allow-rc`. 부팅 103초, `/health` 200, upgrade 6건, `alembic current == heads`(`b8f2c6d91a04`), integrity `ok`, pipelines 응답, 로그 `Traceback` 0건 |
-| RC 수동: OAuth·pipelines·RAG·브랜드·버전 표시 | PASS    | 2026-10-12 사용자 확인 (RC 이미지, 로컬 누적 데이터)                                                                                                                                                         |
-| RC 수동: 제목 생성 (#47)                      | PASS    | 저장 채팅 생성 후 사용자 확인, 컨테이너 로그 331줄(`/usr/bin/docker logs`) `Traceback`·`KeyError` 0건. 제목의 UI 표시는 개발 측이 직접 보지 못했다                                                           |
-| #47 회귀 테스트                               | PASS    | RC 이미지 안 3/3 통과                                                                                                                                                                                        |
-| 최종 태그 이미지 게이트                       | `<TBD>` | 최종 태그 빌드 후 수행                                                                                                                                                                                       |
-| 프로덕션 규모 마이그레이션 시간               | 미검증  | 로컬 891 MB 기준만 측정                                                                                                                                                                                      |
-| 백업 복원·DB downgrade                        | 미시험  | §4, §8                                                                                                                                                                                                       |
-| 프로덕션 Pipelines                            | `<TBD>` | §3.7                                                                                                                                                                                                         |
+| 항목                                          | 결과        | 비고                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| --------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 정적 검사 (병합 브랜치)                       | PASS        | `npm ci`(Node 22), `i18n:parse` 변경 0건, prettier(존재 파일) 통과, vitest 4/4, ruff 추적 파일 363개 통과, `svelte-check` 6,040건(기준선 약 7,800) 중 수정 파일 신규 오류 0건                                                                                                                                                                                                                                                                                                                                                   |
+| RC 자동 게이트                                | PASS        | 2026-10-12 `./scripts/local-test.sh v0.12.0-kwh.1-rc.1 --allow-rc`. 부팅 103초, `/health` 200, upgrade 6건, `alembic current == heads`(`b8f2c6d91a04`), integrity `ok`, pipelines 응답, 로그 `Traceback` 0건                                                                                                                                                                                                                                                                                                                    |
+| RC 수동: OAuth·pipelines·RAG·브랜드·버전 표시 | PASS        | 2026-10-12 사용자 확인 (RC 이미지, 로컬 누적 데이터)                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| RC 수동: 제목 생성 (#47)                      | PASS        | 저장 채팅 생성 후 사용자 확인, 컨테이너 로그 331줄(`/usr/bin/docker logs`) `Traceback`·`KeyError` 0건. 제목의 UI 표시는 개발 측이 직접 보지 못했다                                                                                                                                                                                                                                                                                                                                                                              |
+| #47 회귀 테스트                               | PASS        | RC 이미지 안 3/3 통과                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| 최종 태그 이미지 게이트                       | PASS        | 2026-10-12 `./scripts/local-test.sh v0.12.0-kwh.1`(기본 모드, 자동 백업 포함). **RC 직전 백업(`d4c1a8e37b62`)으로 데이터를 복원해 실행**하여 최종 이미지가 마이그레이션 6건을 실제로 적용했다. 부팅 71초, `/health` 200, upgrade 6건, `alembic current == heads`(`b8f2c6d91a04`), integrity `ok`, pipelines 응답. 컨테이너 이미지 digest = §1 index digest, 기동 로그 `Commit: b7a66193917b…`. 로그 59줄(`/usr/bin/docker logs`) `Traceback`·`KeyError`·`ModuleNotFoundError` 0건. 자동 검사만 수행했고 수동 체크는 RC에서 했다 |
+| 마이그레이션 후 데이터 (읽기 전용 조회)       | PASS        | `model` 369행 → `model_history` 369행, 4개 테이블 `version_id` NULL 0건, 사용자 3·채팅 6 유지. **로컬 DB에 `skill`·`tool`·`function`이 0건이라 이 세 테이블의 backfill 경로는 실제 행으로 실행된 적이 없다** — 프로덕션에 있다면 처음 실행되는 코드이다(§7.2)                                                                                                                                                                                                                                                                   |
+| 프로덕션 규모 마이그레이션 시간               | 미검증      | 로컬 891 MB 기준만 측정                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 백업 복원·DB downgrade                        | 미시험      | §4, §8                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| 프로덕션 Pipelines                            | 소유자 결정 | §3.7. 배포 요청 Issue에서 `check_pipelines` 값을 확정한다                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 
-RC 결과를 최종 태그 이미지의 PASS로 대체하지 않는다.
+RC 결과를 최종 태그 이미지의 PASS로 대체하지 않는다. 최종 게이트는 별도로 최종 이미지에 대해 수행했다.
 
 ### RC 게이트 로그의 ERROR (관측)
 
@@ -233,4 +236,4 @@ RC 결과를 최종 태그 이미지의 PASS로 대체하지 않는다.
 | 재기동은 pull 없이                             | `up -d --no-deps --pull never openwebui`                                   | 일치 |
 | 롤백 기준점 선캡처                             | `Capture current running image (rollback anchor)` 단계                     | 일치 |
 
-> 이 표는 초안 작성 시점의 대조이다. 최종본 작성 직전 workflow를 다시 읽고 `guide_commit`을 확정한다.
+> 이 표는 2026-10-12 초안 작성 시점에 workflow를 읽어 대조한 것이다. 최종본 작성 시점에 workflow의 마지막 변경 커밋이 `44c3db7ac`(2026-10-08)로 그대로임을 `git log`로 재확인했다. 배포 에이전트는 dispatch 전에 `guide_commit` 시점의 workflow와 이 표를 한 번 더 대조한다.
