@@ -43,3 +43,25 @@
 - 사용자: RC 수동 확인(OAuth·RAG·제목 생성) → 프로덕션 스냅샷 리허설 여부 결정 → 통합 PR(`integration/v0.12.2` → `main`) CLA 체크·병합.
 - 병합 후: 최종 태그 `v0.12.2-kwh.1`을 병합된 `main` tip에 발행(사용자 승인) → GHCR 빌드 → 최종 이미지 게이트 → 가이드 최종본(문서 전용 PR) → 배포 요청 Issue(소유자 승인, `check_pipelines`는 배포 직전 결정, 배포 전 개수 기록).
 - 로컬 게이트 컨테이너(8082/9099)는 수동 확인이 끝나면 `./scripts/local-test.sh --down`으로 정리.
+
+## 13:00 UTC — PR #61 병합, 최종 태그, 최종 이미지 게이트, 가이드 최종본
+
+### 수행
+
+1. 사용자가 PR #61의 CLA를 체크한 것을 확인(처음 확인 시점에는 미체크여서 병합을 보류했다). CI 5건 통과 후 draft 해제·`--merge` 병합. 병합 커밋 `2668079eba4ed40d96afeaaedc813208230bd053`, 로컬 `main` 동기화.
+2. 사용자가 RC 수동 확인(OAuth, RAG, 제목 생성 #47)에서 문제가 없다고 알림. 자동화 증거가 아닌 사용자 보고로 기록한다.
+3. 사용자 요청으로 RC 로컬 게이트 컨테이너를 내림(데이터 보존).
+4. 사용자 승인("승인") 후 최종 태그 `v0.12.2-kwh.1`(annotated)을 `2668079eb`에 발행·push. GHCR 빌드 run 38676268849 success. index digest `sha256:407b59b2…67be4`, amd64 `sha256:fbeecae4…922cf`, parity 태그 `git-2668079`가 같은 이미지.
+5. 최종 이미지 게이트: 테스트 채널이 든 직전 데이터를 `~/openwebui-local-test-data.pre-final-gate-aside`로 옮기고, RC 직전 백업(`20261015-103154-…rc.1.tar.gz`)을 새 data 디렉터리에 풀어 `./scripts/local-test.sh v0.12.2-kwh.1 --no-backup --health-timeout 900` 실행. **PASS** — 부팅 122초, upgrade 2건, `alembic current == heads`(`0bd252b206fb`), integrity `ok`, `Traceback`·`KeyError`·`IntegrityError` 0건, `/api/config` `Koreatimes 0.12.2`, `/_app/version.json` = `2668079eb…`, manifest 200. ERROR 2건은 #48 기존 항목.
+6. 가이드 최종본: `<TBD>` 10곳을 채움(태그 target, digest, parity 태그, 빌드 run, RC 수동 확인, 최종 게이트). 프로덕션 스냅샷 리허설은 소유자 미결정으로 기록.
+
+### 한계
+
+- 최종 게이트도 로컬 누적 데이터 기준이며 프로덕션 실데이터 검증이 아니다. 리허설 여부는 미결정.
+- 이미지 롤백·실제 배포 백업 복원·DB downgrade 미시험(#49).
+
+### 다음 재개 지점
+
+- 가이드 최종본 문서 전용 PR(CLA 사용자 체크 후 병합) → 병합 커밋 전체 SHA가 `guide_commit`.
+- 이후 `Production deployment request` Issue 초안(소유자 승인, `check_pipelines`는 배포 직전 결정, 배포 전 개수 기록, 리허설 여부 확정).
+- 최종 이미지 게이트 컨테이너(8082/9099)는 `./scripts/local-test.sh --down`으로 정리 대기, `~/openwebui-local-test-data.pre-final-gate-aside`는 정리 여부 사용자 결정 대기.
