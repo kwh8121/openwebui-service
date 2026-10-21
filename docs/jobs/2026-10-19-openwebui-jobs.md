@@ -33,3 +33,25 @@
 - 소유자 결정: 프로덕션 스냅샷 리허설 여부, `check_pipelines` 값(배포 직전 컨테이너 상태 기준), 스킬 연결 현황 확인.
 - 로컬 게이트 컨테이너(8082·9099)가 떠 있다. 소유자 확인이 끝나면 `./scripts/local-test.sh --down`.
 - 열린 Issue #48·#49·#34는 이번 릴리스와 별개로 유지.
+
+## 04:21 UTC (기록 시각) — 가이드 PR 병합 + 배포 요청 Issue #66 + 게이트 정리 (개발 에이전트)
+
+### 수행
+
+1. **PR #65 병합.** 가이드·일지 문서 전용 PR. CI 3건 통과, `CLEAN`, `--merge`. `main` = `dd826a33113e48253dfe464c5fa0a1819cfa9786` = Issue의 `guide_commit`. 새 태그·이미지 빌드를 일으키지 않았다. 병합 전 CLA 확인은 소유자 지시로 생략(이후 PR에도 동일).
+2. **배포 요청 Issue #66 제출.** 제목 `Production deployment request: v0.12.3-kwh.1`, 라벨 `production-deploy`. tag `v0.12.3-kwh.1`, SHA `5d83d91cc4da81becfa7c763b5e5f4790264979e`, run 39195302512, index digest `sha256:b969b736…72d9`, 가이드 commit `dd826a33113e48253dfe464c5fa0a1819cfa9786`, 롤백 태그 `v0.12.2-kwh.1`(run 38879280051 이후 더 새로운 배포 run 없음을 조회로 확인, 배포 직전 재확인 필요). 마이그레이션 0건, `check_pipelines`는 소유자 결정으로 남겼다.
+3. **로컬 게이트 컨테이너 정리.** `./scripts/local-test.sh --down`, 8082·9099 제거, 남은 `local-test` 컨테이너 0개. 데이터 디렉터리(`~/openwebui-local-test-data`, `~/openwebui-local-test-pipelines`)는 보존.
+
+### 판단·한계 (PASS로 읽지 말 것)
+
+- Issue 제출은 승인이 아니다. 소유자 승인 댓글과 `production` Environment 실행별 승인은 별개다.
+- 위 01~04:03 섹션의 한계(스냅샷 리허설 미수행, 이미지 롤백·백업 복원 미시험, 최종 이미지 브라우저 체크 미수행, 스킬 동작 변경의 프로덕션 영향 미검증)는 그대로 유효하다.
+- 게이트 컨테이너를 내렸으므로, 최종 이미지로 브라우저 확인을 하려면 `./scripts/local-test.sh v0.12.3-kwh.1`로 다시 올려야 한다(부팅 약 200초).
+
+### 다음 재개 지점
+
+- 소유자 결정: 프로덕션 스냅샷 리허설 여부, `check_pipelines` 값(배포 직전 컨테이너 상태 기준), 스킬 연결 현황 확인.
+- 소유자 승인 + `production` Environment 승인 → workflow dispatch(`tag=v0.12.3-kwh.1`, `issue_number=66`, `guide_commit=dd826a33113e48253dfe464c5fa0a1819cfa9786`, `check_pipelines=<소유자 결정>`).
+- 배포 직전: 현재 DB revision `0bd252b206fb`, 디스크 여유, digest 대조(가이드 §3.5-1), 개수 재기록(가이드 §3.6-1·§3.6-2).
+- 배포 후: 가이드 §6~7 점검(`Running upgrade` 없음, 버전 `v0.12.3`, Encrypted channels 꺼짐), 결과를 #66에 기록.
+- 열린 Issue #48·#49·#34는 이번 릴리스와 별개로 유지.
