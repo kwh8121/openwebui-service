@@ -127,3 +127,19 @@
 - 작업일지 커밋(`feature/docs-jobs-20261026` → `integration/v0.12.4`) → PR `integration/v0.12.4` → `main`.
 - 관리자 계정 확보 시: `ui.visibility` 패널, `ENABLE_SKILL_LAZY_LOADING` 동작과 토큰 사용량 변화(프로덕션 적용 결정 근거).
 - 비관리자 관점 가시성 게이팅 확인은 기능을 끈 상태를 만들어야 해 로컬에서는 제약이 있다.
+
+## 08:19 UTC (기록 시각) — 최종 태그 확인·로컬 게이트 정리·배포 가이드 작성 (개발 에이전트)
+
+### 상태 인지와 검증
+
+- PR [#69](https://github.com/kwh8121/openwebui-service/pull/69)가 `main`에 병합됐다. 최종 annotated tag `v0.12.4-kwh.1`은 병합 커밋 `1016dfb9f5a47e56318e8f3912852291d388ef2e`를 가리킨다.
+- 최종 GHCR 빌드 [run 40285816825](https://github.com/kwh8121/openwebui-service/actions/runs/40285816825)는 success이고 head SHA가 tag와 같다. 로컬에 pull된 최종 이미지의 OCI index digest는 `sha256:e0dc03d44be0e119fab56e13826c660fd7d7404c631f687097d7f350e6cf7156`. 최종 태그와 `git-1016dfb` parity 태그의 linux/amd64 manifest digest는 모두 `sha256:4b50bacd3c2da67af95024008aa6867166020ca9891285963b4be07609037c5c`였다.
+- 이미 실행 중인 최종 태그 로컬 게이트에서 `/health` 200, `/api/config`의 `Koreatimes`·`0.12.4`, `/_app/version.json`의 최종 SHA, `/manifest.json`의 `Koreatimes`, Pipelines OpenAPI 200을 직접 확인했다. SQLite `PRAGMA integrity_check = ok`, `alembic current == heads = 0bd252b206fb`. `Running upgrade` 로그는 없었다.
+- 로그의 도구 서버 DNS 오류는 기존 #48과 같다. 브라우저에서 오래된 OAuth 세션 토큰 복호화 오류 2건이 추가로 관측됐다. 이후 폼 로그인 HTTP 200은 로그에 기록됐지만 Google OAuth 로그인은 미검증이다. 전체 브라우저 인수 결과는 이 섹션에서 PASS로 기록하지 않는다.
+- 사용자 요청으로 `./scripts/local-test.sh --down`을 실행했다. 로컬 테스트 컨테이너와 네트워크 제거, `docker ps --filter name=openwebui-local-test` 빈 결과를 확인했다. 누적 데이터 디렉터리 2개는 보존됐다.
+
+### 문서 및 다음 단계
+
+- `feature/docs-v0124-deploy-guide`에서 `docs/manual/kwh-deploy-guide-v0.12.4-kwh.1.md`를 작성했다. 릴리스 식별자, 마이그레이션 0건, 신규 스킬·UI 설정, 운영 사전조건 분기, 백업, 스모크, 롤백, 검증 한계를 정리했다.
+- 가이드는 최종 이미지의 관측 가능한 항목만 PASS로 기술한다. 프로덕션 Pipelines 상태, `ENABLE_SKILL_LAZY_LOADING` 적용, 스냅샷 리허설 여부는 운영 측 결정·관측이 필요하다.
+- 다음 단계: 문서 검증 → feature 커밋 → `integration/v0.12.4` 병합 → PR로 `main` 승격 → `guide_commit` 확정 → 배포 요청 Issue 제출. 프로덕션 workflow dispatch는 개발 에이전트 범위 밖이다.
