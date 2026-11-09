@@ -7,6 +7,7 @@ not read `ctx['model']` for a context that has no completed turn.
 """
 
 import asyncio
+from types import SimpleNamespace
 
 import pytest
 
@@ -31,7 +32,7 @@ def _title_only_ctx():
     return {
         'request': object(),
         'form_data': _form_data(),
-        'user': object(),
+        'user': SimpleNamespace(id='test-user'),
         'metadata': {'chat_id': NON_SAVED_CHAT_ID_PREFIXES[0] + 'regression-47', 'message_id': 'm1'},
         'tasks': {TASKS.TITLE_GENERATION: False},
         'event_emitter': event_emitter,
@@ -42,9 +43,13 @@ def _title_only_ctx():
 def review_calls(monkeypatch):
     calls = []
 
+    async def fake_verified_user_by_id(_user_id):
+        return True
+
     async def fake_review(**kwargs):
         calls.append(kwargs)
 
+    monkeypatch.setattr(middleware, 'get_verified_user_by_id', fake_verified_user_by_id)
     monkeypatch.setattr(middleware, 'review_memory_after_turn', fake_review)
     return calls
 
