@@ -340,3 +340,7 @@ skills-lock.json
 # Claude Code 스킬 요약본은 추적하지 않습니다
 docs/references/Spec Kit 스킬 요약 — CLAUDE.md 축약본.md
 docs/references/Superpowers 스킬 사용법 요약 (Claude Code CLI용).md
+
+# Local evaluation artifacts and temporary fixtures
+/evals/
+/tmp/
