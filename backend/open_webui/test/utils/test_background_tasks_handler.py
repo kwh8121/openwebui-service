@@ -46,10 +46,18 @@ def review_calls(monkeypatch):
     async def fake_verified_user_by_id(_user_id):
         return True
 
+    async def fake_has_queued_message(*_args):
+        return False
+
+    async def fake_get_messages_map_by_chat_id(_chat_id):
+        return {'m1': {'id': 'm1', 'role': 'assistant', 'model': 'test-model', 'content': 'hi there'}}
+
     async def fake_review(**kwargs):
         calls.append(kwargs)
 
     monkeypatch.setattr(middleware, 'get_verified_user_by_id', fake_verified_user_by_id)
+    monkeypatch.setattr(middleware.ChatMessages, 'has_queued_message', fake_has_queued_message)
+    monkeypatch.setattr(middleware.Chats, 'get_messages_map_by_chat_id', fake_get_messages_map_by_chat_id)
     monkeypatch.setattr(middleware, 'review_memory_after_turn', fake_review)
     return calls
 
@@ -62,6 +70,7 @@ def test_title_only_context_does_not_raise_or_review_memory(review_calls):
 
 def test_completed_turn_context_reviews_memory_with_model(review_calls):
     ctx = _title_only_ctx()
+    ctx['metadata']['chat_id'] = 'saved-chat'
     model = {'id': 'test-model'}
     assistant_message = {'content': 'hi there'}
     ctx['model'] = model
@@ -76,9 +85,20 @@ def test_completed_turn_context_reviews_memory_with_model(review_calls):
 
 def test_completed_turn_context_without_model_still_fails_loudly(review_calls):
     ctx = _title_only_ctx()
+    ctx['metadata']['chat_id'] = 'saved-chat'
     ctx['assistant_message'] = {'content': 'hi there'}
 
     with pytest.raises(KeyError):
         asyncio.run(middleware.background_tasks_handler(ctx))
+
+    assert review_calls == []
+
+
+def test_temporary_chat_does_not_review_memory(review_calls):
+    ctx = _title_only_ctx()
+    ctx['model'] = {'id': 'test-model'}
+    ctx['assistant_message'] = {'content': 'hi there'}
+
+    asyncio.run(middleware.background_tasks_handler(ctx))
 
     assert review_calls == []
