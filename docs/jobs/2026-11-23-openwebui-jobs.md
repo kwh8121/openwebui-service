@@ -25,3 +25,10 @@
 
 - OAuth 로그인·세션, 모델 대화, RAG, Tether, Terminals, 이미지 생성, 추천 카드 UX의 인증된 브라우저 조작은 로컬에서 검증하지 않았다. Issue #78의 관리자 acceptance에 남겼다.
 - 다음 단계는 프로덕션 에이전트가 Issue #78과 pinned 가이드를 읽고 GitHub·실제 운영 이미지/DB·디스크·Pipelines 상태를 재조회하고, 새 백업을 검증한 뒤 소유자 및 GitHub `production` Environment 승인에 따라 배포하는 것이다. 개발 에이전트는 운영 SSH·Compose·workflow dispatch를 하지 않았다.
+
+## 12:42 KST — 사용자 요청에 따른 로컬 브라우저 검증 추가 (개발 에이전트)
+
+- 최종 `v0.13.4-kwh.1` 이미지로 축적 데이터 미러 게이트를 재실행해 PASS했다. 자동 백업 후 `/health` 200까지 92초, Alembic head `9f6c2a8d1b43`·upgrade 0건, SQLite integrity `ok`, Pipelines API 도달. 브라우저에서 `Koreatimes` 로그인 화면·title, `/api/config` 버전 `0.13.4`, manifest 이름, `/_app/version.json`의 최종 tag SHA, 로고·favicon·라이트/다크 splash 자산 HTTP 200을 확인했다.
+- 축적 데이터 미러의 Google 로그인 버튼은 Google `Error 400: redirect_uri_mismatch`로 실패했다. 공개 설정의 provider는 저장된 `oidc`였고 `.env.local-test`의 Google 전용 설정과 일치하지 않는다. v0.13.3·v0.13.4 소스의 OAuth callback 라우트는 동일했다. Google Cloud에 등록된 실제 URI는 확인할 수 없었으므로 로컬 설정 문제를 유력 원인으로 보되, OAuth 로그인 PASS로 기록하지 않는다.
+- 기존 데이터를 건드리지 않고 `/tmp`의 별도 fresh DB와 password-signup 템플릿으로 최종 이미지를 검증했다. 자동 게이트 PASS: 첫 기동 Alembic 72건, head 일치, SQLite integrity `ok`, Pipelines API 도달, `/health` 200까지 221초. 테스트 관리자 생성·로그인·새로고침 후 세션 유지·로그아웃·재로그인, Workspace·Admin Panel 진입, 추천 카드가 입력란만 채우고 자동 전송하지 않는 동작을 브라우저에서 확인했다. fresh 인스턴스의 모델은 0개여서 모델 응답과 RAG 인용은 미검증이다. 새로고침 때 채널 API 403은 fresh 기본값 `ENABLE_CHANNELS=false`에 따른 기대 응답으로 확인했다.
+- 후속 증적을 [배포 요청 Issue #78 댓글](https://github.com/kwh8121/openwebui-service/issues/78#issuecomment-7090939358)에 남겼다. disposable fresh DB·컨테이너와 브라우저 임시 산출물은 정리했고, 축적 데이터 미러의 데이터 디렉터리와 백업은 보존했다. 운영 OAuth와 인증 후 기능은 배포 에이전트의 live-state 점검 및 관리자 브라우저 acceptance 대상이다.
