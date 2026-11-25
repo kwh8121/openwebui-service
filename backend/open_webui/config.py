@@ -472,6 +472,11 @@ CODE_INTERPRETER_PYODIDE_PROMPT = """
 - The file system persists across code executions within the same session.
 - Use `import os; os.listdir('/mnt/uploads')` to discover available files."""
 
+# kwh fork (KOR-71, GH #81): /mnt files are browser-only; keep the model from "displaying" them.
+from open_webui.utils.kwh_browser_sandbox import PYODIDE_FILE_DISPLAY_GUIDANCE  # noqa: E402
+
+CODE_INTERPRETER_PYODIDE_PROMPT += PYODIDE_FILE_DISPLAY_GUIDANCE
+
 
 # Vector Database
 

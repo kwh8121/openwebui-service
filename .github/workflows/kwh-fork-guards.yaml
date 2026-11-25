@@ -1,0 +1,61 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# kwh fork guards — fail when an upstream merge silently drops a fork fix
+#
+# Fork-owned. Upstream workflows (frontend.yaml, backend.yaml) are left
+# untouched so upstream merges cannot change these checks.
+# The job names are required status checks on main (Linear KOR-71); keep them
+# stable and do not add a matrix, which would change the check names.
+# ─────────────────────────────────────────────────────────────────────────────
+name: kwh fork guards
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: ['integration/**']
+  pull_request:
+    branches: [main, 'integration/v*']
+
+concurrency:
+  group: kwh-fork-guards-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: kwh-guard-frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5.1.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5.0.0
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm ci --force
+
+      - name: Run fork guard tests
+        run: npx vitest run src/lib/utils/kwh
+
+  backend:
+    name: kwh-guard-backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5.1.0
+
+      - name: Setup Python
+        uses: actions/setup-python@v6.3.0
+        with:
+          python-version: '3.11'
+
+      - name: Install pytest
+        run: pip install pytest
+
+      - name: Run fork guard tests
+        run: python -m pytest backend/open_webui/test/kwh -q -p no:cacheprovider
