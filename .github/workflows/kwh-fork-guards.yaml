@@ -36,7 +36,10 @@ jobs:
           node-version: '22'
 
       - name: Install dependencies
-        run: npm ci --force
+        # onnxruntime-node's CUDA binary download returns 404; the guard tests do not need it.
+        run: npm ci --force --onnxruntime-node-install-cuda=skip
+        env:
+          ONNXRUNTIME_NODE_INSTALL_CUDA: skip
 
       - name: Run fork guard tests
         run: npx vitest run src/lib/utils/kwh
@@ -58,4 +61,4 @@ jobs:
         run: pip install pytest
 
       - name: Run fork guard tests
-        run: python -m pytest backend/open_webui/test/kwh -q -p no:cacheprovider
+        run: python -m pytest backend/kwh_guard_tests -q -p no:cacheprovider

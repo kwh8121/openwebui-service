@@ -1,8 +1,9 @@
 """Fork guard tests for KOR-71 (GH #81): browser Pyodide sandbox paths.
 
 Runs with only pytest installed (.github/workflows/kwh-fork-guards.yaml).
-The helper is loaded straight from its file so open_webui/__init__.py, which
-needs typer and uvicorn, is never imported.
+The helper is loaded straight from its file, and this directory sits outside
+the open_webui package, so open_webui/__init__.py (typer, uvicorn) is never
+imported. pytest 9 imports the enclosing package during setup.
 
 The wiring tests fail when an upstream merge drops the fork hook lines from
 config.py or builtin.py even though the merge itself had no conflict.
@@ -13,7 +14,7 @@ import json
 import re
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[4]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 BACKEND = REPO_ROOT / 'backend' / 'open_webui'
 CASES = json.loads((REPO_ROOT / 'src/lib/utils/kwh/browserSandboxRefCases.json').read_text(encoding='utf-8'))
 

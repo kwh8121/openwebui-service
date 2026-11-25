@@ -1,5 +1,5 @@
 {
-	"_comment": "Shared cases for the browser Pyodide sandbox path rule (KOR-71). Read by src/lib/utils/kwh/browserSandboxRef.test.ts and backend/open_webui/test/kwh/test_browser_sandbox.py.",
+	"_comment": "Shared cases for the browser Pyodide sandbox path rule (KOR-71). Read by src/lib/utils/kwh/browserSandboxRef.test.ts and backend/kwh_guard_tests/test_browser_sandbox.py.",
 	"sandbox": [
 		"sandbox:/mnt/uploads/ac_rlc_circuits.svg",
 		"sandbox:/mnt/data/chart.png",
