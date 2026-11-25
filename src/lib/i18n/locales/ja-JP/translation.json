@@ -4394,6 +4394,7 @@
 	"This deletes {{count}} instances and their files._other": "",
 	"This file changed on disk. Replace it with your edits?": "このファイルはディスク上で変更されています。編集内容で置き換えますか？",
 	"This file is already open. Close its tab or choose another name.": "このファイルはすでに開いています。ファイルのタブを閉じるか、別の名前を指定してください。",
+	"This file is in the browser code sandbox and can't be shown in chat. Open it from the Files tab in this browser with Code Interpreter on. It may not exist on other devices or browsers.": "",
 	"This folder is empty": "このフォルダーは空です",
 	"This is a default user permission and will remain enabled.": "これはデフォルトのユーザー権限であり、有効なままになります。",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "実験的機能であり正常動作しない場合があります。",

@@ -4407,6 +4407,7 @@
 	"This deletes {{count}} instances and their files._other": "இது {{count}} நிகழ்வுகளையும் அவற்றின் கோப்புகளையும் நீக்கும்.",
 	"This file changed on disk. Replace it with your edits?": "வட்டில் இந்தக் கோப்பு மாற்றப்பட்டது. அதை உங்கள் திருத்தங்களால் மாற்றவா?",
 	"This file is already open. Close its tab or choose another name.": "இந்தக் கோப்பு ஏற்கனவே திறந்துள்ளது. அதன் தாவலை மூடவும் அல்லது வேறு பெயரைத் தேர்ந்தெடுக்கவும்.",
+	"This file is in the browser code sandbox and can't be shown in chat. Open it from the Files tab in this browser with Code Interpreter on. It may not exist on other devices or browsers.": "",
 	"This folder is empty": "இந்தக் கோப்புறை காலியாக உள்ளது",
 	"This is a default user permission and will remain enabled.": "இது இயல்புநிலை பயனர் அனுமதி மற்றும் இயக்கப்பட்டிருக்கும்.",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "இது ஒரு சோதனை அம்சமாகும், இது எதிர்பார்த்தபடி செயல்படாமல் இருக்கலாம் மற்றும் எந்த நேரத்திலும் மாற்றத்திற்கு உட்பட்டது.",

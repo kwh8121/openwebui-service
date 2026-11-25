@@ -4407,6 +4407,7 @@
 	"This deletes {{count}} instances and their files._other": "اس سے {{count}} انسٹینس اور ان کی فائلیں حذف ہو جائیں گی۔",
 	"This file changed on disk. Replace it with your edits?": "یہ فائل ڈسک پر تبدیل ہو گئی ہے۔ اسے اپنی ترامیم سے بدلیں؟",
 	"This file is already open. Close its tab or choose another name.": "یہ فائل پہلے سے کھلی ہے۔ اس کا ٹیب بند کریں یا کوئی اور نام منتخب کریں۔",
+	"This file is in the browser code sandbox and can't be shown in chat. Open it from the Files tab in this browser with Code Interpreter on. It may not exist on other devices or browsers.": "",
 	"This folder is empty": "یہ فولڈر خالی ہے",
 	"This is a default user permission and will remain enabled.": "یہ صارف کی ڈیفالٹ اجازت ہے اور فعال رہے گی۔",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "یہ ایک تجرباتی خصوصیت ہے، یہ متوقع طور پر کام نہ کر سکتی ہو اور کسی بھی وقت تبدیل کی جا سکتی ہے",

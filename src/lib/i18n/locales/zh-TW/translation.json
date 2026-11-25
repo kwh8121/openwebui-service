@@ -4378,6 +4378,7 @@
 	"This deletes {{count}} instances and their files._other": "",
 	"This file changed on disk. Replace it with your edits?": "",
 	"This file is already open. Close its tab or choose another name.": "",
+	"This file is in the browser code sandbox and can't be shown in chat. Open it from the Files tab in this browser with Code Interpreter on. It may not exist on other devices or browsers.": "",
 	"This folder is empty": "此資料夾為空",
 	"This is a default user permission and will remain enabled.": "此權限已在預設使用者設定中啟用，並將持續生效。",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "這是一個實驗性功能，它可能無法如預期運作，並且可能會隨時變更。",

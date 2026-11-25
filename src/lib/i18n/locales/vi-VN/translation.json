@@ -4378,6 +4378,7 @@
 	"This deletes {{count}} instances and their files._other": "",
 	"This file changed on disk. Replace it with your edits?": "Tệp này đã thay đổi trên ổ đĩa. Thay thế bằng các chỉnh sửa của bạn?",
 	"This file is already open. Close its tab or choose another name.": "Tệp này đã được mở. Đóng tab của tệp hoặc chọn tên khác.",
+	"This file is in the browser code sandbox and can't be shown in chat. Open it from the Files tab in this browser with Code Interpreter on. It may not exist on other devices or browsers.": "",
 	"This folder is empty": "Thư mục này trống",
 	"This is a default user permission and will remain enabled.": "Đây là quyền người dùng mặc định và sẽ luôn được bật.",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "Đây là tính năng thử nghiệm, có thể không hoạt động như mong đợi và có thể thay đổi bất kỳ lúc nào.",

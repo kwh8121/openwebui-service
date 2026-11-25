@@ -4407,6 +4407,7 @@
 	"This deletes {{count}} instances and their files._other": "ეს წაშლის {{count}} გაშვებულ ასლსა და მათ ფაილებს.",
 	"This file changed on disk. Replace it with your edits?": "ეს ფაილი დისკზე შეიცვალა. ჩავანაცვლო თქვენი ჩასწორებებით?",
 	"This file is already open. Close its tab or choose another name.": "ეს ფაილი უკვე გახსნილია. დახურეთ მისი ჩანართი ან აირჩიეთ სხვა სახელი.",
+	"This file is in the browser code sandbox and can't be shown in chat. Open it from the Files tab in this browser with Code Interpreter on. It may not exist on other devices or browsers.": "",
 	"This folder is empty": "ეს საქაღალდე ცარიელია",
 	"This is a default user permission and will remain enabled.": "ეს მომხმარებლის ნაგულისხმევი ნებართვაა და ჩართული დარჩება.",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "ეს ექსპერიმენტული შესაძლებლობაა, შეიძლება ისე არ იმუშაოს, როგორც მოსალოდნელია, და ნებისმიერ დროს შეიცვალოს.",

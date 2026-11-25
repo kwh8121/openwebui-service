@@ -4436,6 +4436,7 @@
 	"This deletes {{count}} instances and their files._other": "",
 	"This file changed on disk. Replace it with your edits?": "Ova je datoteka promijenjena na disku. Zamijeniti je vašim promjenama?",
 	"This file is already open. Close its tab or choose another name.": "Ova je datoteka već otvorena. Zatvorite njezinu karticu ili odaberite drugi naziv.",
+	"This file is in the browser code sandbox and can't be shown in chat. Open it from the Files tab in this browser with Code Interpreter on. It may not exist on other devices or browsers.": "",
 	"This folder is empty": "Ova mapa je prazna",
 	"This is a default user permission and will remain enabled.": "Ovo je zadano korisničko dopuštenje i ostat će omogućeno.",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "Ovo je eksperimentalna značajka, možda neće funkcionirati prema očekivanjima i podložna je promjenama u bilo kojem trenutku.",

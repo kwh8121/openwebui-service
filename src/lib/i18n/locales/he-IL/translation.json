@@ -4436,6 +4436,7 @@
 	"This deletes {{count}} instances and their files._other": "פעולה זו תמחק {{count}} מופעים ואת הקבצים שלהם.",
 	"This file changed on disk. Replace it with your edits?": "הקובץ הזה השתנה בדיסק. להחליף אותו בגרסה שערכת?",
 	"This file is already open. Close its tab or choose another name.": "הקובץ הזה כבר פתוח. יש לסגור את הכרטיסייה שלו או לבחור שם אחר.",
+	"This file is in the browser code sandbox and can't be shown in chat. Open it from the Files tab in this browser with Code Interpreter on. It may not exist on other devices or browsers.": "",
 	"This folder is empty": "תיקייה זו ריקה",
 	"This is a default user permission and will remain enabled.": "זוהי הרשאת ברירת מחדל של משתמשים והיא תישאר מופעלת.",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "זוהי תכונה ניסיונית, ייתכן שלא תפעל כמצופה והיא עשויה להשתנות בכל עת.",

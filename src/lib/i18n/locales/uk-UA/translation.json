@@ -4465,6 +4465,7 @@
 	"This deletes {{count}} instances and their files._other": "",
 	"This file changed on disk. Replace it with your edits?": "Цей файл змінено на диску. Замінити його вашими змінами?",
 	"This file is already open. Close its tab or choose another name.": "Цей файл уже відкрито. Закрийте його вкладку або виберіть іншу назву.",
+	"This file is in the browser code sandbox and can't be shown in chat. Open it from the Files tab in this browser with Code Interpreter on. It may not exist on other devices or browsers.": "",
 	"This folder is empty": "Ця папка порожня",
 	"This is a default user permission and will remain enabled.": "Це дозвіл користувача за замовчуванням, і він залишиться увімкненим.",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "Це експериментальна функція, вона може працювати не так, як очікувалося, і може бути змінена в будь-який час.",
