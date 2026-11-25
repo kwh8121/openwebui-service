@@ -4436,6 +4436,7 @@
 	"This deletes {{count}} instances and their files._other": "",
 	"This file changed on disk. Replace it with your edits?": "",
 	"This file is already open. Close its tab or choose another name.": "",
+	"This file is in the browser code sandbox and can't be shown in chat. Open it from the Files tab in this browser with Code Interpreter on. It may not exist on other devices or browsers.": "",
 	"This folder is empty": "Aquesta carpeta està buida",
 	"This is a default user permission and will remain enabled.": "Aquest és un permís d'usuari per defecte i romandrà habilitat.",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "Aquesta és una funció experimental, és possible que no funcioni com s'espera i està subjecta a canvis en qualsevol moment.",

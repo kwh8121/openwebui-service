@@ -4407,6 +4407,7 @@
 	"This deletes {{count}} instances and their files._other": "Ez {{count}} példányt és a hozzájuk tartozó fájlokat törli.",
 	"This file changed on disk. Replace it with your edits?": "Ez a fájl megváltozott a lemezen. Felülírod a saját módosításaiddal?",
 	"This file is already open. Close its tab or choose another name.": "Ez a fájl már meg van nyitva. Zárd be a lapját, vagy válassz másik nevet.",
+	"This file is in the browser code sandbox and can't be shown in chat. Open it from the Files tab in this browser with Code Interpreter on. It may not exist on other devices or browsers.": "",
 	"This folder is empty": "Ez a mappa üres",
 	"This is a default user permission and will remain enabled.": "Ez egy alapértelmezett felhasználói engedély, és engedélyezve marad.",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "Ez egy kísérleti funkció, lehet, hogy nem a várt módon működik és bármikor változhat.",

@@ -4394,6 +4394,7 @@
 	"This deletes {{count}} instances and their files._other": "Ini akan memadam {{count}} instans dan failnya.",
 	"This file changed on disk. Replace it with your edits?": "Fail ini berubah pada cakera. Gantikannya dengan suntingan anda?",
 	"This file is already open. Close its tab or choose another name.": "Fail ini sudah dibuka. Tutup tabnya atau pilih nama lain.",
+	"This file is in the browser code sandbox and can't be shown in chat. Open it from the Files tab in this browser with Code Interpreter on. It may not exist on other devices or browsers.": "",
 	"This folder is empty": "Folder ini kosong",
 	"This is a default user permission and will remain enabled.": "Ini ialah kebenaran pengguna lalai dan akan tetap didayakan.",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "Ini adalah ciri percubaan, ia mungkin tidak berfungsi seperti yang diharapkan dan tertakluk kepada perubahan pada bila-bila masa.",

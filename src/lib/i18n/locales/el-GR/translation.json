@@ -4407,6 +4407,7 @@
 	"This deletes {{count}} instances and their files._other": "",
 	"This file changed on disk. Replace it with your edits?": "Αυτό το αρχείο άλλαξε στον δίσκο. Να αντικατασταθεί με τις αλλαγές σας;",
 	"This file is already open. Close its tab or choose another name.": "Αυτό το αρχείο είναι ήδη ανοιχτό. Κλείστε την καρτέλα του ή επιλέξτε άλλο όνομα.",
+	"This file is in the browser code sandbox and can't be shown in chat. Open it from the Files tab in this browser with Code Interpreter on. It may not exist on other devices or browsers.": "",
 	"This folder is empty": "Αυτός ο φάκελος είναι κενός",
 	"This is a default user permission and will remain enabled.": "Αυτό είναι προεπιλεγμένο δικαίωμα χρήστη και θα παραμείνει ενεργοποιημένο.",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "Αυτή είναι μια πειραματική λειτουργία, μπορεί να μην λειτουργεί όπως αναμένεται και υπόκειται σε αλλαγές οποιαδήποτε στιγμή.",

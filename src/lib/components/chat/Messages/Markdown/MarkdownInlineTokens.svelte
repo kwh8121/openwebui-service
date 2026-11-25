@@ -25,6 +25,8 @@
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { skills, terminalSkills } from '$lib/stores';
 	import { copyToClipboard, safeLinkUrl, unescapeHtml } from '$lib/utils';
+	// kwh fork (KOR-71, GH #81): browser-only Pyodide files cannot be loaded from chat.
+	import { isBrowserSandboxRef } from '$lib/utils/kwh/browserSandboxRef';
 
 	import Image from '$lib/components/common/Image.svelte';
 	import KatexRenderer from './KatexRenderer.svelte';
@@ -112,6 +114,12 @@
 		{@const linkToken = getLinkToken(token)}
 		{#if linkToken.noteId && !markdown?.document && markdown?.allowRemoteContent !== false}
 			<NoteLinkToken noteId={linkToken.noteId} href={linkToken.href} />
+		{:else if isBrowserSandboxRef(linkToken.href)}
+			<span class="text-xs text-gray-500" title={linkToken.href}
+				>{linkToken.text} — {$i18n.t(
+					"This file is in the browser code sandbox and can't be shown in chat. Open it from the Files tab in this browser with Code Interpreter on. It may not exist on other devices or browsers."
+				)}</span
+			>
 		{:else if token.tokens && !linkToken.isAutolink}
 			<a
 				href={linkToken.safeHref}
@@ -140,6 +148,12 @@
 						class="text-xs text-gray-400">Image unavailable: {token.text}</span
 					>{/if}
 			{/await}
+		{:else if isBrowserSandboxRef(token.href)}
+			<span class="text-xs text-gray-500" title={token.href}
+				>{token.text || token.href} — {$i18n.t(
+					"This file is in the browser code sandbox and can't be shown in chat. Open it from the Files tab in this browser with Code Interpreter on. It may not exist on other devices or browsers."
+				)}</span
+			>
 		{:else}<Image src={token.href} alt={token.text} allowExternal={true} />{/if}
 	{:else if token.type === 'strong'}
 		<strong

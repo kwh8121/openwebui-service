@@ -4407,6 +4407,7 @@
 	"This deletes {{count}} instances and their files._other": "Scriosann sé seo {{count}} ásc agus a gcomhaid.",
 	"This file changed on disk. Replace it with your edits?": "Athraíodh an comhad seo ar an diosca. Ionadaigh é le do chuid athruithe?",
 	"This file is already open. Close its tab or choose another name.": "Tá an comhad seo oscailte cheana féin. Dún a chluaisín nó roghnaigh ainm eile.",
+	"This file is in the browser code sandbox and can't be shown in chat. Open it from the Files tab in this browser with Code Interpreter on. It may not exist on other devices or browsers.": "",
 	"This folder is empty": "Tá an fillteán seo folamh",
 	"This is a default user permission and will remain enabled.": "Is cead úsáideora réamhshocraithe é seo agus fanfaidh sé cumasaithe.",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "Is gné turgnamhach í seo, b'fhéidir nach bhfeidhmeoidh sé mar a bhíothas ag súil leis agus tá sé faoi réir athraithe ag am ar bith.",

@@ -4465,6 +4465,7 @@
 	"This deletes {{count}} instances and their files._other": "",
 	"This file changed on disk. Replace it with your edits?": "Tento súbor na disku sa zmenil. Nahradiť ho vašimi úpravami?",
 	"This file is already open. Close its tab or choose another name.": "Tento súbor je už otvorený. Zatvorte jeho kartu alebo vyberte iný názov.",
+	"This file is in the browser code sandbox and can't be shown in chat. Open it from the Files tab in this browser with Code Interpreter on. It may not exist on other devices or browsers.": "",
 	"This folder is empty": "Tento priečinok je prázdny",
 	"This is a default user permission and will remain enabled.": "Toto je predvolené oprávnenie používateľa a zostane povolené.",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "Toto je experimentálna funkcia, nemusí fungovať podľa očakávania a môže byť kedykoľvek zmenená.",

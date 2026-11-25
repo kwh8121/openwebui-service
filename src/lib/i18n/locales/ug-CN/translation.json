@@ -4407,6 +4407,7 @@
 	"This deletes {{count}} instances and their files._other": "",
 	"This file changed on disk. Replace it with your edits?": "دىسكىدىكى بۇ ھۆججەت ئۆزگەردى. ئۇنى تەھرىرلىرىڭىز بىلەن ئالماشتۇرامسىز؟",
 	"This file is already open. Close its tab or choose another name.": "بۇ ھۆججەت ئاللىقاچان ئوچۇق. ئۇنىڭ بەتكۈچىنى يېپىڭ ياكى باشقا نام تاللاڭ.",
+	"This file is in the browser code sandbox and can't be shown in chat. Open it from the Files tab in this browser with Code Interpreter on. It may not exist on other devices or browsers.": "",
 	"This folder is empty": "بۇ قىسقۇچ بوش",
 	"This is a default user permission and will remain enabled.": "بۇ كۆڭۈلدىكى ئىشلەتكۈچى ھوقۇقى بولۇپ، قوزغىتىلغان ھالەتتە قالىدۇ.",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "بۇ تاجرىبىلىك ئىقتىدار، ناتوقرا ئىشلەش ياكى خالىغان ۋاقىتتا ئۆزگىرىشى مۇمكىن.",

@@ -4410,6 +4410,7 @@
 	"This deletes {{count}} instances and their files._other": "Buburahin nito ang {{count}} instance at ang mga file ng mga ito.",
 	"This file changed on disk. Replace it with your edits?": "Nagbago ang file na ito sa disk. Palitan ito ng iyong mga pag-edit?",
 	"This file is already open. Close its tab or choose another name.": "Bukas na ang file na ito. Isara ang tab nito o pumili ng ibang pangalan.",
+	"This file is in the browser code sandbox and can't be shown in chat. Open it from the Files tab in this browser with Code Interpreter on. It may not exist on other devices or browsers.": "",
 	"This folder is empty": "Walang laman ang folder na ito",
 	"This is a default user permission and will remain enabled.": "Isa itong default na pahintulot ng gumagamit at mananatiling naka-enable.",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "Isa itong eksperimental na feature, maaaring hindi ito gumana gaya ng inaasahan at maaari itong magbago anumang oras.",

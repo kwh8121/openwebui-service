@@ -4378,6 +4378,7 @@
 	"This deletes {{count}} instances and their files._other": "การดำเนินการนี้จะลบอินสแตนซ์ {{count}} รายการและไฟล์ของอินสแตนซ์เหล่านั้น",
 	"This file changed on disk. Replace it with your edits?": "ไฟล์นี้บนดิสก์มีการเปลี่ยนแปลง แทนที่ด้วยการแก้ไขของคุณหรือไม่?",
 	"This file is already open. Close its tab or choose another name.": "ไฟล์นี้เปิดอยู่แล้ว ให้ปิดแท็บของไฟล์นี้หรือเลือกชื่ออื่น",
+	"This file is in the browser code sandbox and can't be shown in chat. Open it from the Files tab in this browser with Code Interpreter on. It may not exist on other devices or browsers.": "",
 	"This folder is empty": "โฟลเดอร์นี้ว่างเปล่า",
 	"This is a default user permission and will remain enabled.": "นี่คือสิทธิ์ของผู้ใช้เริ่มต้นและจะถูกเปิดใช้งานไว้เสมอ",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "นี่เป็นฟีเจอร์ทดลอง อาจไม่ทำงานตามที่คาดไว้และอาจมีการเปลี่ยนแปลงได้ตลอดเวลา",

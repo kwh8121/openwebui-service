@@ -4407,6 +4407,7 @@
 	"This deletes {{count}} instances and their files._other": "",
 	"This file changed on disk. Replace it with your edits?": "",
 	"This file is already open. Close its tab or choose another name.": "",
+	"This file is in the browser code sandbox and can't be shown in chat. Open it from the Files tab in this browser with Code Interpreter on. It may not exist on other devices or browsers.": "",
 	"This folder is empty": "This folder is empty, such void",
 	"This is a default user permission and will remain enabled.": "This is a default user permission and will remain enabled.",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "This is such experimental feature, it may not function as expected and is subject to change at any time. Much brave.",
