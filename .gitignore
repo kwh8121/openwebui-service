@@ -344,3 +344,4 @@ docs/references/Superpowers 스킬 사용법 요약 (Claude Code CLI용).md
 # Local evaluation artifacts and temporary fixtures
 /evals/
 /tmp/
+/artifacts/
