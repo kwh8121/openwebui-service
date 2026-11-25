@@ -1,0 +1,24 @@
+{
+	"_comment": "Shared cases for the browser Pyodide sandbox path rule (KOR-71). Read by src/lib/utils/kwh/browserSandboxRef.test.ts and backend/open_webui/test/kwh/test_browser_sandbox.py.",
+	"sandbox": [
+		"sandbox:/mnt/uploads/ac_rlc_circuits.svg",
+		"sandbox:/mnt/data/chart.png",
+		"SANDBOX:/mnt/uploads/x.svg",
+		"  sandbox:/mnt/uploads/x.svg  ",
+		"/mnt/uploads/ac_rlc_circuits.svg",
+		"/MNT/uploads/x.svg",
+		"file:///mnt/uploads/x.svg"
+	],
+	"not_sandbox": [
+		"",
+		"data:image/png;base64,iVBORw0KGgo=",
+		"/api/v1/files/0b1f6c2e-1234-4abc-8def-0123456789ab/content",
+		"0b1f6c2e-1234-4abc-8def-0123456789ab",
+		"https://example.com/image.png",
+		"/static/favicon.png",
+		"/home/user/output.svg",
+		"/mnt",
+		"mnt/uploads/x.svg",
+		"https://example.com/mnt/uploads/x.svg"
+	]
+}

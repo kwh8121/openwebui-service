@@ -3310,6 +3310,11 @@ async def display_file(
             path = f'/api/v1/files/{path}/content'
         parts = path.split('/')
         if len(parts) != 6 or parts[:4] != ['', 'api', 'v1', 'files'] or parts[-1] != 'content':
+            # kwh fork (KOR-71, GH #81): explain browser-only Pyodide paths instead of the generic error.
+            from open_webui.utils.kwh_browser_sandbox import browser_sandbox_display_error, is_browser_sandbox_ref
+
+            if is_browser_sandbox_ref(path):
+                return JSONCodec.dumps(browser_sandbox_display_error(path), ensure_ascii=False)
             return JSONCodec.dumps(
                 {'error': 'Use file_id or /api/v1/files/<file_id>/content for an uploaded file.', 'exists': False}
             )
