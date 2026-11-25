@@ -4465,6 +4465,7 @@
 	"This deletes {{count}} instances and their files._other": "Tím se smaže {{count}} instancí a jejich soubory.",
 	"This file changed on disk. Replace it with your edits?": "Tento soubor byl na disku změněn. Nahradit jej vašimi úpravami?",
 	"This file is already open. Close its tab or choose another name.": "Tento soubor je již otevřený. Zavřete jeho kartu nebo zvolte jiný název.",
+	"This file is in the browser code sandbox and can't be shown in chat. Open it from the Files tab in this browser with Code Interpreter on. It may not exist on other devices or browsers.": "",
 	"This folder is empty": "Tato složka je prázdná",
 	"This is a default user permission and will remain enabled.": "Toto je výchozí uživatelské oprávnění a zůstane povolené.",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "Toto je experimentální funkce, nemusí fungovat podle očekávání a může být kdykoli změněna.",

@@ -4407,6 +4407,7 @@
 	"This deletes {{count}} instances and their files._other": "Papason niini ang {{count}} ka instansiya ug ang ilang mga file.",
 	"This file changed on disk. Replace it with your edits?": "Nausab kini nga file sa disk. Ilisan kini sa imong mga gi-edit?",
 	"This file is already open. Close its tab or choose another name.": "Abli na kini nga file. Sirad-i ang tab niini o pagpili og laing ngalan.",
+	"This file is in the browser code sandbox and can't be shown in chat. Open it from the Files tab in this browser with Code Interpreter on. It may not exist on other devices or browsers.": "",
 	"This folder is empty": "Walay sulod kini nga folder",
 	"This is a default user permission and will remain enabled.": "Default kini nga pagtugot sa tiggamit ug magpabiling gipaandar.",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "Sulayanan pa kini nga bahin, mahimong dili molihok sumala sa gipaabot ug mahimong mausab bisan kanus-a.",

@@ -4407,6 +4407,7 @@
 	"This deletes {{count}} instances and their files._other": "Hetta strikar {{count}} instansir og fílurnar hjá teimum.",
 	"This file changed on disk. Replace it with your edits?": "Henda fílan er broytt á diskinum. Skift hana út við broytingunum hjá tær?",
 	"This file is already open. Close its tab or choose another name.": "Henda fílan er longu opin. Lat fanan hjá henni aftur ella vel eitt annað navn.",
+	"This file is in the browser code sandbox and can't be shown in chat. Open it from the Files tab in this browser with Code Interpreter on. It may not exist on other devices or browsers.": "",
 	"This folder is empty": "Henda mappan er tóm",
 	"This is a default user permission and will remain enabled.": "Hetta er eitt standardloyvi hjá brúkarum og verður verandi virkið.",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "Hetta er ein royndarfunktión. Hon virkar møguliga ikki sum væntað og kann broytast nær sum helst.",

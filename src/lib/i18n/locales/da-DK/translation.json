@@ -4407,6 +4407,7 @@
 	"This deletes {{count}} instances and their files._other": "Dette sletter {{count}} instanser og deres filer.",
 	"This file changed on disk. Replace it with your edits?": "Denne fil er ændret på disken. Vil du erstatte den med dine ændringer?",
 	"This file is already open. Close its tab or choose another name.": "Denne fil er allerede åben. Luk dens fane, eller vælg et andet navn.",
+	"This file is in the browser code sandbox and can't be shown in chat. Open it from the Files tab in this browser with Code Interpreter on. It may not exist on other devices or browsers.": "",
 	"This folder is empty": "Denne mappe er tom",
 	"This is a default user permission and will remain enabled.": "Dette er en standardbrugertilladelse og vil forblive aktiveret.",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "Dette er en eksperimentel funktion, den fungerer muligvis ikke som forventet og kan ændres når som helst.",

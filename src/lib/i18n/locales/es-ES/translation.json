@@ -4436,6 +4436,7 @@
 	"This deletes {{count}} instances and their files._other": "Esto elimina {{count}} instancias y sus archivos.",
 	"This file changed on disk. Replace it with your edits?": "Este archivo se ha modificado en el disco. ¿Reemplazarlo con tus cambios?",
 	"This file is already open. Close its tab or choose another name.": "Este archivo ya está abierto. Cierra su pestaña o elige otro nombre.",
+	"This file is in the browser code sandbox and can't be shown in chat. Open it from the Files tab in this browser with Code Interpreter on. It may not exist on other devices or browsers.": "",
 	"This folder is empty": "Esta carpeta está vacía",
 	"This is a default user permission and will remain enabled.": "Este es un permiso predeterminado y se mantendrá activo ",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "Esta es una característica experimental, por lo que puede no funcionar como se esperaba y está sujeta a cambios en cualquier momento.",

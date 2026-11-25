@@ -4407,6 +4407,7 @@
 	"This deletes {{count}} instances and their files._other": "See kustutab {{count}} instantsi ja nende failid.",
 	"This file changed on disk. Replace it with your edits?": "See fail on kettal muutunud. Asendada see oma muudatustega?",
 	"This file is already open. Close its tab or choose another name.": "See fail on juba avatud. Sulgege selle vahekaart või valige teine nimi.",
+	"This file is in the browser code sandbox and can't be shown in chat. Open it from the Files tab in this browser with Code Interpreter on. It may not exist on other devices or browsers.": "",
 	"This folder is empty": "See kaust on tühi",
 	"This is a default user permission and will remain enabled.": "See on vaikimisi kasutajaõigus ja jääb lubatuks.",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "See on katsetuslik funktsioon, see ei pruugi toimida ootuspäraselt ja võib igal ajal muutuda.",

@@ -4436,6 +4436,7 @@
 	"This deletes {{count}} instances and their files._other": "Tiks dzēstas {{count}} instances un to faili.",
 	"This file changed on disk. Replace it with your edits?": "Šis fails diskā ir mainīts. Aizstāt to ar saviem labojumiem?",
 	"This file is already open. Close its tab or choose another name.": "Šis fails jau ir atvērts. Aizveriet tā cilni vai izvēlieties citu nosaukumu.",
+	"This file is in the browser code sandbox and can't be shown in chat. Open it from the Files tab in this browser with Code Interpreter on. It may not exist on other devices or browsers.": "",
 	"This folder is empty": "Šī mape ir tukša",
 	"This is a default user permission and will remain enabled.": "Šī ir noklusējuma lietotāja atļauja un paliks iespējota.",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "Šī ir eksperimentāla funkcija, tā var nedarboties kā paredzēts un var tikt mainīta jebkurā laikā.",

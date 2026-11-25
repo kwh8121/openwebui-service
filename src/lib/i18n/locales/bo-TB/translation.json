@@ -4378,6 +4378,7 @@
 	"This deletes {{count}} instances and their files._other": "",
 	"This file changed on disk. Replace it with your edits?": "གསོག་སྡེར་ཐོག་གི་ཡིག་ཆ་འདི་བསྒྱུར་ཟིན། ཁྱེད་ཀྱི་རྩོམ་སྒྲིག་གིས་དེའི་ཚབ་བྱེད་དམ།",
 	"This file is already open. Close its tab or choose another name.": "ཡིག་ཆ་འདི་ཁ་ཕྱེ་ཟིན། དེའི་ཤོག་བྱང་ཁ་རྒྱག་ཡང་ན་མིང་གཞན་ཞིག་འདེམས།",
+	"This file is in the browser code sandbox and can't be shown in chat. Open it from the Files tab in this browser with Code Interpreter on. It may not exist on other devices or browsers.": "",
 	"This folder is empty": "ཡིག་སྣོད་འདི་སྟོང་པ་ཡིན།",
 	"This is a default user permission and will remain enabled.": "འདི་ནི་སྔོན་སྒྲིག་བེད་སྤྱོད་མཁན་གྱི་དབང་ཚད་ཡིན་པས་སྒོ་ཕྱེ་བཞིན་གནས།",
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "འདི་ནི་ཚོད་ལྟའི་རང་བཞིན་གྱི་ཁྱད་ཆོས་ཤིག་ཡིན། དེ་རེ་སྒུག་ལྟར་ལས་ཀ་བྱེད་མི་སྲིད། དེ་མིན་དུས་ཚོད་གང་རུང་ལ་འགྱུར་བ་འགྲོ་སྲིད།",
