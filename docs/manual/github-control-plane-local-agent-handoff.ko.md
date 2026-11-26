@@ -297,6 +297,7 @@ Browser checks required after deployment: OAuth, real model chat, upload/RAG, br
 
 **Changelog**:
 
+- **2026-11-26 (v1.2.1 유지, 하위 호환)**: `deploy-approved-production-release.yaml`에 선택 입력 `health_timeout_seconds`(정수 60~3600, 기본 300)를 추가했다. 기동 중에 DB 데이터를 변환하는 릴리스(예: `v0.13.5`의 채팅 메시지 저장 전환)는 릴리스별 배포 가이드가 값을 지정하고, 배포 요청 Issue에 같은 값을 적는다. 지정이 없으면 기존과 같이 300초다. 다른 입력과 승인 계약은 바뀌지 않았다.
 - **2026-10-07 (v1.2.1)**: 상태 인지를 GitHub Issue·Actions와 커밋된 저장소 문서의 직접 조회로 변경했다. 관리자 채팅 relay를 예외 복구 경로로 낮추고, 배포 전용 머신의 현재 런타임 재조회와 `READY | BLOCKED | UNKNOWN` 판정을 명시했다. 배포 Issue·workflow 승인 계약은 v1.2와 동일하다.
 - **2026-07-31 (v1.2)**:
   - `.github/workflows/deploy-approved-production-release.yaml` 신설 (PR #11) 후 하드닝 (PR #12) → main 승격 (PR #13). `workflow_dispatch` 입력(`tag`, `issue_number`, `guide_commit`, `check_pipelines`) + `environment: production` (required reviewer 게이트 자동 발동) + `runs-on: [self-hosted, production]`. 실행 순서: 검증 → dispatched 코멘트 → 현재 이미지 캡처 → pull → WAL-safe 백업 → checkpoint 코멘트 → 새 이미지 up → health/version/manifest/Pipelines API 검증 → 로그 스캔 → success/failure 코멘트 자동 게시. `check_pipelines=false`는 Pipelines가 의도적으로 중지된 경우에만 허용하며 Issue에 결정 근거를 기록한다. **PR #12 하드닝으로 추가된 검증 항목 (미충족 시 dispatch 거부)**:
@@ -307,7 +308,7 @@ Browser checks required after deployment: OAuth, real model chat, upload/RAG, br
     5. **Backup 스코프**: `tar -C ${DEPLOY_DIR} openwebui -C /app pipelines` (openwebui + pipelines 통합, WAL-safe stop 후 실행).
     6. **Backup 무결성**: `tar -tzf` 전수 스캔으로 아카이브 완결성 즉시 검증.
     7. **Pre-start 실패 자동 복원**: `OPENWEBUI_STOPPED=true && NEW_CONTAINER_STARTED != 'true'` 조건 시 이전 이미지 재기동. **Post-start 실패는 자동 롤백 안 함** — 관리자 incident 결정 대기 (§"장애 처리와 권한" 준수).
-    8. **Health poll**: `/health` + `/_app/version.json` + `/manifest.json` + `:9099/openapi.json` 4개 모두 200 (300초 timeout, 5초 interval).
+    8. **Health poll**: `/health` + `/_app/version.json` + `/manifest.json` + `:9099/openapi.json` 4개 모두 200 (기본 300초 timeout, 5초 interval; 2026-11-26부터 `health_timeout_seconds` 입력으로 60~3600초 조정).
     9. **Startup 로그 스캔**: 마지막 100줄에서 `Traceback|Failed to start|sqlalchemy\.exc` 검출 시 fail.
   - `.github/ISSUE_TEMPLATE/production_deployment_request.yaml` 신설. 라벨 `production-deploy`, §"배포 요청 계약" 필드가 form 필드로 1:1 매핑. `Per-release deploy guide (path + commit SHA)` 필드로 §51 fix 계승.
   - §"셀프호스팅 러너 등록" 절차 신설. 관리자 1회 수동 액션(러너 설치·systemd 서비스·docker 접근·GHCR 로그인)을 절차화. 이 절차 완료 시 마지막 ⚠️(러너)가 ✅로 전환되고 workflow가 실제 실행 가능해진다.
