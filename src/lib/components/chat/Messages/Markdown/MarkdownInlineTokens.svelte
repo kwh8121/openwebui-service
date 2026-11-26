@@ -114,7 +114,7 @@
 		{#if linkToken.noteId && !markdown?.document && markdown?.allowRemoteContent !== false}
 			<NoteLinkToken noteId={linkToken.noteId} href={linkToken.href} />
 		{:else if isBrowserSandboxRef(linkToken.href)}
-			<span class="text-xs text-gray-500" title={linkToken.href}
+			<span class="text-xs text-base-500" title={linkToken.href}
 				>{linkToken.text} — {$i18n.t(
 					"This file is in the browser code sandbox and can't be shown in chat. Open it from the Files tab in this browser with Code Interpreter on. It may not exist on other devices or browsers."
 				)}</span
@@ -148,7 +148,7 @@
 					>{/if}
 			{/await}
 		{:else if isBrowserSandboxRef(token.href)}
-			<span class="text-xs text-gray-500" title={token.href}
+			<span class="text-xs text-base-500" title={token.href}
 				>{token.text || token.href} — {$i18n.t(
 					"This file is in the browser code sandbox and can't be shown in chat. Open it from the Files tab in this browser with Code Interpreter on. It may not exist on other devices or browsers."
 				)}</span
