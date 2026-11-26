@@ -39,8 +39,11 @@ describe('MarkdownInlineTokens wiring', () => {
 		);
 	});
 
-	it('guards image tokens after the terminal document branch', () => {
-		const terminal = source.search(/terminalDocument\?\.localPath\(\s*token\.href\s*\)/);
+	// Upstream renamed terminalDocument to machineDocument in v0.13.5; accept both.
+	it('guards image tokens after the machine document branch', () => {
+		const terminal = source.search(
+			/(?:terminal|machine)Document\?\.localPath\(\s*token\.href\s*\)/
+		);
 		const guard = source.search(/\{:else if isBrowserSandboxRef\(\s*token\.href\s*\)\s*\}/);
 		const fallback = source.search(/<Image\s+src=\{token\.href\}/);
 		expect(terminal).toBeGreaterThan(-1);
