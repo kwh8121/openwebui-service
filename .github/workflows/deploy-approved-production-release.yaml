@@ -37,6 +37,11 @@ on:
         required: true
         default: true
         type: boolean
+      health_timeout_seconds:
+        description: 'Seconds to wait for /health after the new container starts (60-3600). Raise it for releases whose DB migration converts data at boot.'
+        required: false
+        default: 300
+        type: number
 
 concurrency:
   group: production-deploy
@@ -54,7 +59,7 @@ env:
   BACKUP_DIR: /home/ubuntu
   # Health check settings
   HEALTH_URL: http://localhost/health
-  HEALTH_TIMEOUT_SECONDS: '300'
+  HEALTH_TIMEOUT_SECONDS: ${{ inputs.health_timeout_seconds || 300 }}
   HEALTH_POLL_INTERVAL_SECONDS: '5'
 
 jobs:
@@ -77,6 +82,11 @@ jobs:
             echo "::error::tag '${{ inputs.tag }}' must match v<X.Y.Z>-kwh.<N> (no RC, no main, no latest)"
             exit 1
           fi
+          if ! [[ "${HEALTH_TIMEOUT_SECONDS}" =~ ^[0-9]+$ ]] || (( HEALTH_TIMEOUT_SECONDS < 60 || HEALTH_TIMEOUT_SECONDS > 3600 )); then
+            echo "::error::health_timeout_seconds '${HEALTH_TIMEOUT_SECONDS}' must be an integer between 60 and 3600"
+            exit 1
+          fi
+          echo "Health timeout: ${HEALTH_TIMEOUT_SECONDS}s"
 
       - name: Validate release evidence and deploy guide
         env:
